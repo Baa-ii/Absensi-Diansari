@@ -1,17 +1,12 @@
-<!doctype html>
-<html lang="id">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<style>:root{color-scheme:light}body{margin:0;font:14px system-ui,sans-serif}[hidden]{display:none!important}img{max-width:100%}</style>
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>Absensi Karyawan</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-/* Layout: slim left rail for navigation, one working column; wide tables scroll inside their own box */
+/* Layout: sticky top bar (brand, search, tools) + horizontal main menu, breadcrumb, left section panel, content column */
 :root{
-  --bg:#F5F7F6; --surface:#FFFFFF; --ink:#17201E; --muted:#66726E; --line:#E2E7E4; --hover:#F0F4F2;
+  --bg:#F3F6F5; --surface:#FFFFFF; --ink:#17201E; --muted:#66726E; --line:#E2E7E4; --hover:#EFF3F1;
   --accent:#1F5F54; --accent-ink:#FFFFFF; --accent-soft:#E2EFEB;
   --good:#2C7A58; --good-soft:#E0F1E8; --warn:#9A6A12; --warn-soft:#F8EDD3; --bad:#B03F2B; --bad-soft:#F8E1DC;
   --shadow:0 12px 40px rgba(20,32,28,.14);
@@ -31,36 +26,68 @@
 
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--ui);font-size:14px;line-height:1.5;
-  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px}
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 28px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:60;background:var(--bg)}
 button,input,select,textarea{font:inherit;color:inherit}
 .num,td.n,.mono{font-family:var(--num);font-variant-numeric:tabular-nums}
-.app{display:grid;grid-template-columns:196px minmax(0,1fr);gap:32px;max-width:1240px;margin:0 auto}
-.rail{position:sticky;top:20px;align-self:start;display:flex;flex-direction:column;gap:24px}
-.brand{font-weight:700;font-size:17px;letter-spacing:-.01em}
-.brand small{display:block;font-weight:500;font-size:12px;color:var(--muted);letter-spacing:0}
-.nav{display:flex;flex-direction:column;gap:2px}
-.nav a{padding:8px 12px;border-radius:8px;color:var(--muted);text-decoration:none;font-weight:600;display:flex;justify-content:space-between;gap:8px}
-.nav a:hover{background:var(--hover);color:var(--ink)}
-.nav a[aria-current="page"]{background:var(--accent-soft);color:var(--accent)}
-.nav .badge{font-family:var(--num);font-size:11px;background:var(--warn-soft);color:var(--warn);border-radius:99px;padding:0 7px;align-self:center}
-main{min-width:0;display:flex;flex-direction:column;gap:20px}
+.wrap{max-width:1400px;margin:0 auto}
+a{color:var(--accent)}
+
+/* top bar */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:40;background:var(--surface);border:1px solid var(--line);border-radius:0 0 14px 14px;box-shadow:0 4px 16px rgba(20,32,28,.07);margin-bottom:12px}
+.bar1{display:grid;grid-template-columns:auto minmax(180px,440px) auto;justify-content:space-between;align-items:center;gap:16px;padding:10px 16px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;letter-spacing:-.01em;white-space:nowrap}
+.mark{width:28px;height:28px;border-radius:8px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-size:13px;font-weight:700}
+.search{position:relative}
+.search input{width:100%;background:var(--hover);border-color:transparent;padding-left:12px}
+.search kbd{position:absolute;right:10px;top:7px;font-family:var(--num);font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:0 5px;background:var(--surface)}
+.sr{position:absolute;left:0;right:0;top:calc(100% + 6px);background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden;z-index:50}
+.sr button{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:8px 12px;cursor:pointer}
+.sr button:first-child{border-top:0} .sr button:hover{background:var(--hover)}
+.utools{display:flex;align-items:center;gap:6px}
+.ib{position:relative;width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:var(--surface);cursor:pointer;display:grid;place-items:center;font-size:15px}
+.ib:hover{background:var(--hover)}
+.ib .badge{position:absolute;top:-5px;right:-5px}
+.user{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:99px;padding:3px 12px 3px 4px;font-weight:600;font-size:13px}
+.user i{font-style:normal;width:26px;height:26px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-size:12px}
+.badge{font-family:var(--num);font-size:11px;background:var(--warn-soft);color:var(--warn);border-radius:99px;padding:0 7px;line-height:1.6}
+.menubar{display:flex;gap:2px;padding:0 10px 8px;overflow-x:auto}
+.menubar a{padding:7px 16px;border-radius:9px;color:var(--muted);text-decoration:none;font-weight:600;white-space:nowrap;display:flex;gap:8px;align-items:center}
+.menubar a:hover{background:var(--hover);color:var(--ink)}
+.menubar a[aria-current="page"]{background:var(--accent-soft);color:var(--accent)}
+.crumb{font-size:12.5px;color:var(--muted);padding:2px 4px 10px}
+.crumb a{color:var(--muted);text-decoration:none} .crumb b{color:var(--ink);font-weight:600}
+
+/* shell */
+.shell{display:grid;grid-template-columns:248px minmax(0,1fr);gap:16px;align-items:start}
+.side{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;position:sticky;top:calc(env(safe-area-inset-top,0px) + 112px)}
+.ent{background:var(--accent);color:var(--accent-ink);padding:14px 16px;display:flex;flex-direction:column;gap:2px}
+.ent b{font-size:15px} .ent span{font-size:12.5px;opacity:.85}
+.sl{padding:8px 0}
+.sl h2{padding:8px 16px 4px}
+.sl a{display:flex;justify-content:space-between;gap:8px;padding:8px 16px;color:var(--muted);text-decoration:none;font-weight:500;border-top:1px solid var(--line)}
+.sl a:first-of-type{border-top:0}
+.sl a:hover{background:var(--hover);color:var(--ink)}
+.sl a[aria-current="page"]{background:var(--accent-soft);color:var(--accent);font-weight:700}
+main{min-width:0;display:flex;flex-direction:column;gap:16px}
 .banner{background:var(--warn-soft);color:var(--warn);border-radius:10px;padding:9px 14px;font-weight:500}
-.head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
-h1{font-size:22px;line-height:1.2;letter-spacing:-.015em;margin:0;text-wrap:balance}
-h2{font-size:13px;margin:0;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.tb{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px}
+.tb h1{font-size:19px;line-height:1.25;letter-spacing:-.01em;margin:0;text-wrap:balance}
+h2{font-size:12px;margin:0;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700}
 .sub{color:var(--muted);margin:2px 0 0}
 .tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 13px;font-weight:600;cursor:pointer;white-space:nowrap}
-.btn:hover{background:var(--hover)}
+.btn:hover{background:var(--hover)} .btn:disabled{opacity:.5;cursor:default}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .btn.primary:hover{filter:brightness(1.08)}
 .btn.good{color:var(--good)} .btn.bad{color:var(--bad)}
 .btn.sm{padding:3px 10px;font-size:12.5px}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-input[type=text],input[type=date],input[type=month],input[type=time],input[type=number],select,textarea{
+input[type=text],input[type=date],input[type=time],input[type=number],select,textarea{
   background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px;min-width:0;max-width:100%}
 input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px}
+td input[type=number],td select{padding:4px 8px;font-size:13px}
 .pad{padding:18px}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));background:var(--surface);border:1px solid var(--line);border-radius:12px}
 .stat{padding:14px 18px;border-left:1px solid var(--line)}
@@ -68,7 +95,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
 .stat b{display:block;font-family:var(--num);font-size:26px;font-weight:500;line-height:1.2;font-variant-numeric:tabular-nums}
 .stat span{color:var(--muted);font-size:12.5px}
 .stat.w b{color:var(--warn)} .stat.b b{color:var(--bad)} .stat.g b{color:var(--good)}
-.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:20px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:16px}
 .cols>*{min-width:0}
 .list{display:flex;flex-direction:column}
 .item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 18px;border-top:1px solid var(--line)}
@@ -79,7 +106,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-
 .empty{padding:28px 18px;color:var(--muted);text-align:center}
 .scroll{overflow-x:auto}
 table{border-collapse:collapse;width:100%}
-th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface);position:sticky;top:0}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface)}
 td{padding:9px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
 tr:last-child td{border-bottom:0}
 tbody tr.click{cursor:pointer} tbody tr.click:hover td{background:var(--hover)}
@@ -88,17 +115,16 @@ td.dim{color:var(--muted)} tr.off td{background:var(--hover);color:var(--muted)}
 .pill{display:inline-block;border-radius:99px;padding:1px 10px;font-size:12px;font-weight:600;white-space:nowrap;background:var(--hover);color:var(--muted)}
 .pill.good{background:var(--good-soft);color:var(--good)} .pill.warn{background:var(--warn-soft);color:var(--warn)}
 .pill.bad{background:var(--bad-soft);color:var(--bad)} .pill.info{background:var(--accent-soft);color:var(--accent)}
-.sw{position:relative;display:inline-block;width:36px;height:20px}
+.lnk{background:none;border:0;padding:0;font-weight:700;cursor:pointer;text-align:left;color:var(--ink)} .lnk:hover{color:var(--accent);text-decoration:underline}
+.sw{position:relative;display:inline-block;width:36px;height:20px;vertical-align:middle}
 .sw input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer;z-index:1}
 .sw i{position:absolute;inset:0;border-radius:99px;background:var(--line);transition:background .15s}
 .sw i::after{content:"";position:absolute;left:2px;top:2px;width:16px;height:16px;border-radius:50%;background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.3);transition:transform .15s}
 .sw input:checked+i{background:var(--accent)} .sw input:checked+i::after{transform:translateX(16px)}
 .sw input:focus-visible+i{outline:2px solid var(--accent);outline-offset:2px}
-.tabs{display:flex;flex-wrap:wrap;gap:4px}
-.tabs button{border:0;background:none;padding:6px 12px;border-radius:8px;font-weight:600;color:var(--muted);cursor:pointer}
-.tabs button:hover{background:var(--hover)} .tabs button.on{background:var(--accent-soft);color:var(--accent)}
-.pager{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 14px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
-.drop{border:1.5px dashed var(--line);border-radius:12px;padding:36px 18px;text-align:center;color:var(--muted);cursor:pointer;background:var(--surface)}
+.pager{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+.pager.top{border-top:0;border-bottom:1px solid var(--line)}
+.drop{border:1.5px dashed var(--line);border-radius:12px;padding:30px 18px;text-align:center;color:var(--muted);cursor:pointer;background:var(--surface);display:block}
 .drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
 .drop b{display:block;color:var(--ink);font-size:15px}
 .form{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
@@ -110,33 +136,43 @@ label.f input,label.f select,label.f textarea{font-weight:400;color:var(--ink)}
 .bar{flex:1;min-width:0;background:var(--accent);border-radius:4px 4px 0 0;position:relative;opacity:.85}
 .bar.last{opacity:1}
 .bar span{position:absolute;top:100%;left:50%;transform:translateX(-50%);font-size:11px;color:var(--muted);margin-top:4px;font-family:var(--num)}
-.over-ov{position:fixed;inset:0;background:rgba(10,16,14,.45);z-index:50;display:flex;justify-content:center;align-items:flex-start;padding:5vh 16px;overflow:auto}
+.over-ov{position:fixed;inset:0;background:rgba(10,16,14,.45);z-index:70;display:flex;justify-content:center;align-items:flex-start;padding:5vh 16px;overflow:auto}
 .modal{background:var(--surface);border-radius:14px;box-shadow:var(--shadow);width:min(640px,100%);padding:22px;display:flex;flex-direction:column;gap:16px}
-.drawer{position:fixed;top:0;right:0;bottom:0;width:min(780px,100%);background:var(--surface);box-shadow:var(--shadow);z-index:50;overflow:auto;padding:22px;padding-right:max(22px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:16px}
+.modal h1,.drawer h1{font-size:19px;margin:0}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(900px,100%);background:var(--surface);box-shadow:var(--shadow);z-index:70;overflow:auto;padding:22px;padding-right:max(22px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:16px}
 .pick{max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:8px}
 .pick label{display:flex;gap:10px;align-items:center;padding:6px 12px;border-top:1px solid var(--line);cursor:pointer}
 .pick label:first-child{border-top:0} .pick label:hover{background:var(--hover)}
 .letter{border:1px solid var(--line);border-radius:8px;padding:18px;display:flex;flex-direction:column;gap:10px}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:99px;font-weight:600;z-index:80}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:99px;font-weight:600;z-index:90}
 .mapgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
 .muted{color:var(--muted)}
-main a{color:var(--accent);font-weight:600}
-@media (max-width:820px){
-  .app{grid-template-columns:minmax(0,1fr);gap:16px}
-  .rail{position:static;flex-direction:row;align-items:center;flex-wrap:wrap;gap:8px 16px}
-  .nav{flex-direction:row;overflow-x:auto;max-width:100%;padding-bottom:2px}
-  .nav a{white-space:nowrap}
+.bulk{background:var(--accent-soft);padding:10px 14px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.issues{margin:0;padding-left:18px;color:var(--warn)}
+@media (max-width:900px){
+  .shell{grid-template-columns:minmax(0,1fr)}
+  .side{position:static;flex-direction:row;overflow-x:auto}
+  .ent{display:none}
+  .sl{display:flex;padding:6px;gap:4px} .sl h2{display:none}
+  .sl a{border:0;border-radius:8px;white-space:nowrap}
+  .bar1{grid-template-columns:1fr auto} .search{grid-column:1/-1;order:3}
+  .user span{display:none}
   .stat{border-left:0;border-top:1px solid var(--line)}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
-<div class="app">
-  <aside class="rail">
-    <div class="brand">Absensi<small id="orgline">Karyawan</small></div>
-    <nav class="nav" id="nav"></nav>
-  </aside>
-  <main id="main"></main>
+<div class="wrap">
+  <header class="top">
+    <div class="bar1">
+      <div class="brand"><span class="mark">A</span>Absensi Karyawan</div>
+      <div class="search"><input type="text" id="gs" data-bind="gs" placeholder="Cari karyawan (nama atau ID)" autocomplete="off" aria-label="Cari karyawan"><kbd>Ctrl K</kbd><div class="sr" id="gsr" hidden></div></div>
+      <div class="utools"><button class="ib" data-act="theme" title="Ganti tema" aria-label="Ganti tema">&#9790;</button><div class="user"><i>HR</i><span>Admin HRD</span></div></div>
+    </div>
+    <nav class="menubar" id="menubar" aria-label="Menu utama"></nav>
+  </header>
+  <div class="crumb" id="crumb"></div>
+  <div class="shell"><aside class="side" id="side"></aside><main id="main"></main></div>
 </div>
 <div id="layer"></div>
 <div id="toast" class="toast" hidden></div>
@@ -149,85 +185,109 @@ const toMin=t=>{if(!t)return null;const p=t.split(':');return +p[0]*60+ +p[1]};
 const fromMin=m=>pad(Math.floor(m/60))+':'+pad(m%60);
 const dstr=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 const pd=s=>{const p=s.split('-');return new Date(+p[0],+p[1]-1,+p[2])};
+const dayNum=s=>{const p=s.split('-').map(Number);return Math.round(Date.UTC(p[0],p[1]-1,p[2])/86400000)};
+const numDate=n=>{const d=new Date(n*86400000);return d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)+'-'+pad(d.getUTCDate())};
 const HARI=['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
 const BULAN=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmtDate=ds=>{const d=pd(ds);return HARI[d.getDay()]+', '+d.getDate()+' '+BULAN[d.getMonth()].slice(0,3)+' '+d.getFullYear()};
 const fmtH=m=>m?(m/60).toFixed(1).replace('.',','):'0';
-const TODAY=dstr(new Date());
-const normId=x=>String(x).trim().replace(/^0+(?=\d)/,'');
-const daysOf=mo=>{const [y,m]=mo.split('-').map(Number);const n=new Date(y,m,0).getDate();return Array.from({length:n},(_,i)=>`${y}-${pad(m)}-${pad(i+1)}`)};
 const rp=n=>'Rp'+Math.round(n).toLocaleString('id-ID');
+const TODAY=dstr(new Date());
+const normId=x=>String(x??'').trim().replace(/^0+(?=\d)/,'');
 function rangeDays(){const out=[],b=pd(ui.to);for(let d=pd(ui.from),i=0;d<=b&&i<120;d.setDate(d.getDate()+1),i++)out.push(dstr(d));return out}
-function toast(t){const el=$('#toast');el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,2200)}
+function toast(t){const el=$('#toast');el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,2400)}
 
 /* ---------- storage ---------- */
-const KEY='absensi-karyawan-v2';
-function loadS(){try{const j=localStorage.getItem(KEY);if(j)return JSON.parse(j)}catch(e){}return null}
+const KEY='absensi-karyawan-v3',OLDKEY='absensi-karyawan-v2';
+function loadS(){for(const k of [KEY,OLDKEY]){try{const j=localStorage.getItem(k);if(j)return JSON.parse(j)}catch(e){}}return null}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function migrate(s){
+  s.set=s.set||DEFAULT_SET();
+  s.set.shifts.forEach(x=>{if(x.rot==null)x.rot=x.id!=='reg'});
+  if(s.set.rate==null)s.set.rate=24000;
+  s.set.holidays=s.set.holidays||[];
+  s.emps=s.emps||[];
+  s.emps.forEach(e=>{e.pos=e.pos||'';e.sched=e.sched||'tetap';e.pay=e.pay||'Bulanan';e.rate=+e.rate||0;e.off=!!e.off;e.ot=!!e.ot});
+  s.att=s.att||{};s.spl=s.spl||[];s.imports=s.imports||[];
+  s.spl.forEach(x=>{if(x.status==='Diajukan')x.status='Disetujui';else if(x.status==='Ditolak')x.status='Dibatalkan'});
+  return s;
+}
 
 /* ---------- demo data ---------- */
 function rng(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
-const DEFAULT_SET=()=>({shifts:[{id:'reg',name:'Kantor',start:'08:00',end:'16:30'},{id:'pagi',name:'Shift 1',start:'07:00',end:'15:00'},{id:'siang',name:'Shift 2',start:'15:00',end:'23:00'},{id:'malam',name:'Shift 3',start:'23:00',end:'07:00'}],tol:10,minOT:30,rate:24000,sat:false,holidays:['2026-08-17','2026-12-25']});
+function DEFAULT_SET(){return {shifts:[{id:'reg',name:'Kantor',start:'08:00',end:'16:30',rot:false},{id:'pagi',name:'Shift 1',start:'07:00',end:'15:00',rot:true},{id:'siang',name:'Shift 2',start:'15:00',end:'23:00',rot:true},{id:'malam',name:'Shift 3',start:'23:00',end:'07:00',rot:true}],tol:10,minOT:30,rate:24000,sat:false,holidays:['2026-08-17','2026-12-25']}}
 function demo(){
   const R=rng(7),set=DEFAULT_SET();
   const F=['Agus','Budi','Siti','Dewi','Rina','Andi','Eko','Wahyu','Fitri','Yusuf','Dian','Ratna','Hendra','Lestari','Joko','Sri','Rizki','Nur','Putri','Bayu','Indah','Dedi','Anisa','Taufik','Maya','Irfan','Yuni','Fajar','Ayu','Slamet'];
   const L=['Santoso','Pratama','Wijaya','Hidayat','Saputra','Kurniawan','Rahayu','Setiawan','Nugroho','Permana','Utami','Susanto','Ramadhan','Firmansyah','Hartono','Purnama','Wulandari','Maulana','Siregar','Kusuma'];
-  const D=[['Produksi',90,.8],['Gudang',36,.7],['Maintenance',18,.7],['Admin',22,.05],['Keuangan',12,0],['HRD',10,0],['IT',8,.1],['Marketing',28,.1]];
-  const emps=[];let n=1001;
-  D.forEach(([dept,c,p])=>{for(let i=0;i<c;i++){
-    const shift=dept==='Produksi'?(()=>{const x=R();return x<.35?'pagi':x<.7?'siang':'malam'})():dept==='Gudang'?'pagi':'reg';
-    emps.push({id:String(n++),name:F[Math.floor(R()*F.length)]+' '+L[Math.floor(R()*L.length)],dept,shift,ot:R()<p})}});
+  const D=[['Produksi',90,.6,'Mingguan',['pagi','siang','malam']],['Gudang',36,.6,'2 mingguan',['pagi','siang']],['Maintenance',18,.6,'2 mingguan',['pagi','siang','malam']],
+          ['Admin',22,.05,'Bulanan',null],['Keuangan',12,0,'Bulanan',null],['HRD',10,0,'Bulanan',null],['IT',8,.1,'Bulanan',null],['Marketing',28,.1,'Bulanan',null]];
+  const emps=[],rot={};let n=1001;
+  D.forEach(([dept,c,p,pay,rs])=>{for(let i=0;i<c;i++){
+    const head=i===0,id=String(n++);
+    emps.push({id,name:F[Math.floor(R()*F.length)]+' '+L[Math.floor(R()*L.length)],dept,pos:head?'Kepala':(rs?'Operator':'Staf'),
+      sched:(rs&&!head)?'bergilir':'tetap',shift:'reg',pay,rate:head?35000:0,ot:head?true:R()<p,off:false});
+    if(rs&&!head)rot[id]={rs,off:i};
+  }});
   const att={},spl=[],otMap={};
-  const start=new Date(2026,9,1),end=new Date(2026,10,6);
-  for(let d=new Date(start);d<=end;d.setDate(d.getDate()+1)){
-    const dow=d.getDay();if(dow===0||dow===6)continue;const ds=dstr(d);
+  const t0=new Date(2026,9,1),t1=new Date(2026,10,6);
+  for(let d=new Date(t0);d<=t1;d.setDate(d.getDate()+1)){
+    const dow=d.getDay();if(dow===0||dow===6)continue;const ds=dstr(d),wk=Math.floor((dayNum(ds)-dayNum('2026-10-01'))/7);
     emps.forEach(e=>{
-      const sh=set.shifts.find(x=>x.id===e.shift),s=toMin(sh.start),en=toMin(sh.end)+(isNight(sh)?1440:0),r=R(),k=e.id+'|'+ds;
+      const ro=rot[e.id],shId=ro?ro.rs[(wk+ro.off)%ro.rs.length]:'reg',sh=set.shifts.find(x=>x.id===shId);
+      const s=toMin(sh.start),night=toMin(sh.end)<=s,en=toMin(sh.end)+(night?1440:0),r=R(),k=e.id+'|'+ds,ex=ro?{sh:shId}:{};
       if(r<.015)return;
       if(r<.035){att[k]={ov:['Sakit','Izin','Cuti'][Math.floor(R()*3)]};return}
-      if(r<.05){att[k]={in:fromMin((s-Math.floor(R()*10))%1440),out:fromMin((s-Math.floor(R()*10))%1440),n:1};return}
+      if(r<.05){const t=(s-Math.floor(R()*10)+1440)%1440;att[k]={in:fromMin(t),out:fromMin(t),n:1,...ex};return}
       const inM=Math.round(R()<.08?s+11+R()*40:s-R()*25);
       let outM=Math.round(en+R()*12-4);
-      if(e.ot&&(e.shift==='pagi'||e.shift==='reg')&&R()<.26){
+      if(e.ot&&R()<.26){
         outM=Math.round(en+45+R()*150);
-        const key=ds+'|'+e.dept;(otMap[key]=otMap[key]||{ds,dept:e.dept,sh,emps:[],max:0}).max=Math.max(otMap[key].max,outM);
-        if(R()<.78)otMap[key].emps.push(e.id);
+        const key=ds+'|'+e.dept+'|'+shId,o=otMap[key]=otMap[key]||{ds,dept:e.dept,sh,emps:[],max:0};
+        o.max=Math.max(o.max,outM);if(R()<.78)o.emps.push(e.id);
       }
-      att[k]={in:fromMin(inM%1440),out:fromMin(outM%1440),n:2,...(outM>=1440?{nd:1}:{})};
+      att[k]={in:fromMin(((inM%1440)+1440)%1440),out:fromMin(outM%1440),n:2,...(outM>=1440?{nd:1}:{}),...ex};
     });
   }
   const cnt={};
   Object.values(otMap).filter(o=>o.emps.length).sort((a,b)=>a.ds<b.ds?-1:1).forEach(o=>{
     const mo=o.ds.slice(0,7);cnt[mo]=(cnt[mo]||0)+1;
-    const endM=Math.ceil(o.max/30)*30;
-    spl.push({id:'SPL/'+o.ds.slice(0,4)+'/'+o.ds.slice(5,7)+'/'+String(cnt[mo]).padStart(3,'0'),date:o.ds,start:o.sh.end,end:fromMin(endM),
-      reason:o.dept==='Produksi'?'Mengejar target produksi':o.dept==='Gudang'?'Bongkar muat kiriman tambahan':'Perbaikan mesin di luar jam kerja',dept:o.dept,emps:o.emps,status:'Disetujui'});
+    spl.push({id:'SPL/'+o.ds.slice(0,4)+'/'+o.ds.slice(5,7)+'/'+String(cnt[mo]).padStart(3,'0'),date:o.ds,start:o.sh.end,end:fromMin((Math.ceil(o.max/30)*30)%1440),
+      reason:o.dept==='Produksi'?'Mengejar target produksi':o.dept==='Gudang'?'Bongkar muat kiriman tambahan':o.dept==='Maintenance'?'Perbaikan mesin di luar jam kerja':'Menyelesaikan pekerjaan mendesak',dept:o.dept,emps:o.emps,status:'Disetujui'});
   });
-  const eligible=d=>emps.filter(e=>e.ot&&e.dept===d).slice(0,6).map(e=>e.id);
-  spl.push({id:'SPL/2026/11/090',date:'2026-11-09',start:'17:00',end:'20:00',reason:'Pesanan mendadak, target kirim Selasa',dept:'Produksi',emps:eligible('Produksi'),status:'Diajukan'});
-  spl.push({id:'SPL/2026/11/091',date:'2026-11-07',start:'08:00',end:'13:00',reason:'Stock opname akhir bulan',dept:'Gudang',emps:eligible('Gudang').slice(0,4),status:'Diajukan'});
-  return {demo:true,emps,att,spl,set,imports:[]};
+  const el=d=>emps.filter(e=>e.ot&&e.dept===d).slice(0,6).map(e=>e.id);
+  spl.push({id:'SPL/2026/11/090',date:'2026-11-11',start:'17:00',end:'20:00',reason:'Pesanan mendadak, target kirim akhir pekan',dept:'Produksi',emps:el('Produksi'),status:'Disetujui'});
+  spl.push({id:'SPL/2026/11/091',date:'2026-11-14',start:'08:00',end:'13:00',reason:'Stock opname akhir bulan',dept:'Gudang',emps:el('Gudang').slice(0,4),status:'Disetujui'});
+  return migrate({demo:true,emps,att,spl,set,imports:[]});
 }
-let S=loadS()||demo();
-S.set.holidays=S.set.holidays||[];if(S.set.rate==null)S.set.rate=24000;
+let S=migrate(loadS()||demo());
 
 /* ---------- business rules ---------- */
+const actE=()=>S.emps.filter(e=>!e.off);
 function shiftOf(e){return S.set.shifts.find(x=>x.id===e.shift)||S.set.shifts[0]}
 function isNight(sh){return toMin(sh.end)<=toMin(sh.start)}
 const dur=s=>(toMin(s.end)-toMin(s.start)+1440)%1440;
-function eq(h,hol){if(!h)return 0;if(!hol)return Math.min(h,1)*1.5+Math.max(h-1,0)*2;return Math.min(h,8)*2+Math.min(Math.max(h-8,0),1)*3+Math.max(h-9,0)*4}
+const rateOf=e=>e&&e.rate>0?e.rate:S.set.rate;
 function isHoliday(ds){const dow=pd(ds).getDay();return S.set.holidays.includes(ds)||dow===0||(dow===6&&!S.set.sat)}
+function detectShift(t){
+  let c=S.set.shifts.filter(s=>s.rot);if(!c.length)c=S.set.shifts;
+  let best=null;
+  c.forEach(s=>{const diff=Math.abs(((t-toMin(s.start)+720)%1440+1440)%1440-720);if(!best||diff<best.dist)best={id:s.id,dist:diff}});
+  return best;
+}
 function dayInfo(e,ds){
-  const r=S.att[e.id+'|'+ds]||{},hol=isHoliday(ds),sh=shiftOf(e);
-  const night=isNight(sh),inM=toMin(r.in),outM=toMin(r.out)+(r.nd?1440:0),sEnd=toMin(sh.end)+(night?1440:0),complete=r.n>1&&inM!=null&&outM-inM>=30;
+  const r=S.att[e.id+'|'+ds]||{},rot=e.sched==='bergilir',hol=rot?false:isHoliday(ds);
+  const sh=(rot&&S.set.shifts.find(x=>x.id===(r.shov||r.sh)))||shiftOf(e);
+  const night=isNight(sh),inM=toMin(r.in),outM=toMin(r.out)+(r.nd?1440:0),sEnd=toMin(sh.end)+(night?1440:0);
+  const complete=r.n>1&&inM!=null&&outM-inM>=30;
   let status,late=0;
   if(r.ov)status=r.ov;
   else if(r.in){
     if(!complete)status='Tidak lengkap';
     else if(!hol&&inM>toMin(sh.start)+S.set.tol){status='Terlambat';late=inM-toMin(sh.start)}
     else status='Hadir';
-  }else status=hol?'Libur':(ds<TODAY?'Alpa':'—');
+  }else status=rot?(ds<TODAY?'Tanpa scan':'—'):hol?'Libur':(ds<TODAY?'Alpa':'—');
   let ot=0;
   if(complete&&!r.ov){
     if(hol){let w=outM-inM;if(w>300)w-=60;ot=w>=S.set.minOT?w:0}
@@ -240,52 +300,66 @@ function dayInfo(e,ds){
     else if(!e.ot)flag='Tidak berhak lembur';
     else paid=Math.floor(Math.min(ot,dur(spl))/30)*30;
   }
-  return {r,hol,sh,status,late,ot,spl,paid,flag,amt:paid/60*(S.set.rate||0)};
+  return {r,hol,sh,rot,status,late,ot,spl,paid,flag,un:rot&&!!r.un&&!r.shov,amt:paid/60*rateOf(e)};
 }
 function recap(e,days){
-  const o={hadir:0,telat:0,izin:0,alpa:0,inc:0,otMin:0,amt:0,noSpl:0};
+  const o={hadir:0,telat:0,izin:0,alpa:0,inc:0,noscan:0,un:0,otMin:0,amt:0,noSpl:0};
   days.forEach(ds=>{const i=dayInfo(e,ds);
     if(['Hadir','Terlambat','Dinas Luar'].includes(i.status))o.hadir++;
     if(i.status==='Terlambat')o.telat++;
     if(['Izin','Sakit','Cuti'].includes(i.status))o.izin++;
     if(i.status==='Alpa')o.alpa++;
+    if(i.status==='Tanpa scan')o.noscan++;
     if(i.status==='Tidak lengkap')o.inc++;
+    if(i.un)o.un++;
     o.otMin+=i.paid;o.amt+=i.amt;if(i.flag==='Tanpa SPL')o.noSpl++;});
   return o;
 }
 const pillCls=s=>({'Hadir':'good','Terlambat':'warn','Tidak lengkap':'warn','Alpa':'bad','Izin':'info','Sakit':'info','Cuti':'info','Dinas Luar':'info'}[s]||'');
+const splCost=(s,EM)=>s.emps.reduce((a,id)=>a+rateOf(EM.get(id)),0)*dur(s)/60;
+const EMap=()=>new Map(S.emps.map(e=>[e.id,e]));
 
 /* ---------- ui state ---------- */
 function latest(){let m='';for(const k in S.att){const d=k.split('|')[1];if(d>m)m=d}return m||TODAY}
 const L0=latest();
-const ui={view:'ringkasan',month:L0.slice(0,7),day:L0,from:L0.slice(0,7)+'-01',to:L0,q:'',dept:'',page:0,drawer:null,splTab:'Diajukan',imp:null,confirm:false};
-const VIEWS=[['ringkasan','Ringkasan'],['impor','Impor fingerprint'],['rekap','Rekap bulanan'],['lembur','Lembur & SPL'],['karyawan','Karyawan'],['pengaturan','Pengaturan']];
+const ui={view:'ringkasan',day:L0,from:L0.slice(0,7)+'-01',to:L0,q:'',dept:'',pay:'',showOff:false,page:0,drawer:null,splTab:'Semua',setTab:'jam',imp:null,ie:null,confirm:false,cd:false,cx:null,sel:new Set()};
+const SEC=[
+ {k:'beranda',t:'Beranda',items:[{v:'ringkasan',t:'Ringkasan harian'}]},
+ {k:'absensi',t:'Absensi',items:[{v:'rekap',t:'Rekap & tarikan'},{v:'impor',t:'Impor fingerprint'}]},
+ {k:'lembur',t:'Lembur & SPL',items:[{v:'lembur',sub:'Semua',t:'Semua SPL'},{v:'lembur',sub:'Dibatalkan',t:'Dibatalkan'},{v:'lembur',sub:'Tanpa SPL',t:'Lembur tanpa SPL'}]},
+ {k:'karyawan',t:'Karyawan',items:[{v:'karyawan',t:'Daftar karyawan'},{v:'impor-karyawan',t:'Impor karyawan'}]},
+ {k:'pengaturan',t:'Pengaturan',items:[{v:'pengaturan',sub:'jam',t:'Jam kerja'},{v:'pengaturan',sub:'aturan',t:'Aturan & tarif'},{v:'pengaturan',sub:'libur',t:'Hari libur'},{v:'pengaturan',sub:'data',t:'Data & cadangan'}]}];
+const secOf=v=>SEC.find(s=>s.items.some(i=>i.v===v));
+const subOf=v=>v==='lembur'?ui.splTab:v==='pengaturan'?ui.setTab:undefined;
+
 const depts=()=>[...new Set(S.emps.map(e=>e.dept))].sort();
+const PAYS=['Mingguan','2 mingguan','Bulanan'];
 const deptOpts=sel=>'<option value="">Semua departemen</option>'+depts().map(d=>`<option ${d===sel?'selected':''}>${esc(d)}</option>`).join('');
-const monthOpts=()=>{const set=new Set([ui.month,TODAY.slice(0,7)]);for(const k in S.att)set.add(k.split('|')[1].slice(0,7));return[...set].sort().reverse()};
-const monthSel=()=>`<select data-bind="month" id="monthsel">${monthOpts().map(m=>`<option value="${m}" ${m===ui.month?'selected':''}>${BULAN[+m.slice(5)-1]} ${m.slice(0,4)}</option>`).join('')}</select>`;
+const payOpts=sel=>'<option value="">Semua kelompok gaji</option>'+PAYS.map(d=>`<option ${d===sel?'selected':''}>${d}</option>`).join('');
 const PS=40;
-function pager(total){const pages=Math.max(1,Math.ceil(total/PS));if(ui.page>=pages)ui.page=pages-1;
-  return `<div class="pager"><span>${total?ui.page*PS+1:0}–${Math.min(total,(ui.page+1)*PS)} dari ${total}</span><span class="tools"><button class="btn sm" data-act="prev" ${ui.page<=0?'disabled':''}>Sebelumnya</button><button class="btn sm" data-act="next" ${ui.page>=pages-1?'disabled':''}>Berikutnya</button></span></div>`}
-const matchQ=e=>(!ui.dept||e.dept===ui.dept)&&(!ui.q||(e.name+' '+e.id).toLowerCase().includes(ui.q.toLowerCase()));
-const sw=(act,id,on)=>`<label class="sw"><input type="checkbox" data-bind="${act}" data-id="${esc(id)}" ${on?'checked':''} aria-label="Boleh lembur"><i></i></label>`;
-const pendingN=()=>S.spl.filter(s=>s.status==='Diajukan').length;
+function pager(total,top){const pages=Math.max(1,Math.ceil(total/PS));if(ui.page>=pages)ui.page=pages-1;
+  return `<div class="pager${top?' top':''}"><span>${total?ui.page*PS+1:0}–${Math.min(total,(ui.page+1)*PS)} dari ${total}</span><span class="tools"><button class="btn sm" data-act="prev" ${ui.page<=0?'disabled':''}>Sebelumnya</button><button class="btn sm" data-act="next" ${ui.page>=pages-1?'disabled':''}>Berikutnya</button></span></div>`}
+const matchQ=e=>(!ui.dept||e.dept===ui.dept)&&(!ui.pay||e.pay===ui.pay)&&(!ui.q||(e.name+' '+e.id+' '+e.pos).toLowerCase().includes(ui.q.toLowerCase()));
+const sw=(bind,id,on,extra='',label='')=>`<label class="sw"><input type="checkbox" data-bind="${bind}" data-id="${esc(id)}" ${extra} ${on?'checked':''} aria-label="${label}"><i></i></label>`;
+const tb=(title,right='',sub='')=>`<section class="panel tb"><div><h1>${title}</h1>${sub?`<p class="sub">${sub}</p>`:''}</div><div class="tools">${right}</div></section>`;
+const rangeCtl=()=>`<input type="date" id="from" data-bind="from" value="${ui.from}" aria-label="Dari tanggal"><span class="muted">sampai</span><input type="date" id="to" data-bind="to" value="${ui.to}" aria-label="Sampai tanggal"><select id="preset" data-bind="preset" aria-label="Pilih cepat"><option value="">Pilih cepat</option><option value="tw">Minggu ini</option><option value="lw">Minggu lalu (Sen–Min)</option><option value="14">14 hari terakhir</option><option value="cur">Bulan ini</option><option value="prev">Bulan lalu</option></select>`;
+const schedText=e=>e.sched==='bergilir'?'Shift bergilir':'Tetap '+shiftOf(e).name;
 
 /* ---------- views ---------- */
 const V={},LST={};
 
 V.ringkasan=()=>{
-  if(!S.emps.length)return `<div class="head"><h1>Ringkasan</h1></div><div class="panel empty">Belum ada data karyawan. Buka <a href="#impor">Impor fingerprint</a> atau muat data contoh di <a href="#pengaturan">Pengaturan</a>.</div>`;
-  const ds=ui.day,rows=S.emps.map(e=>({e,i:dayInfo(e,ds)})),c=k=>rows.filter(r=>r.i.status===k).length;
+  const E=actE();
+  if(!E.length)return tb('Ringkasan harian')+`<div class="panel empty">Belum ada data karyawan. Buka <a href="#impor-karyawan" data-act="go" data-v="impor-karyawan">Impor karyawan</a> atau muat data contoh di <a href="#pengaturan" data-act="go" data-v="pengaturan" data-sub="data">Pengaturan</a>.</div>`;
+  const ds=ui.day,rows=E.map(e=>({e,i:dayInfo(e,ds)})),c=k=>rows.filter(r=>r.i.status===k).length;
   const hadir=c('Hadir'),telat=c('Terlambat'),dinas=c('Dinas Luar'),izin=rows.filter(r=>['Izin','Sakit','Cuti'].includes(r.i.status)).length,alpa=c('Alpa'),inc=c('Tidak lengkap'),otN=rows.filter(r=>r.i.paid>0).length;
-  const hol=isHoliday(ds);
-  const attn=rows.filter(r=>['Alpa','Tidak lengkap','Terlambat'].includes(r.i.status)).sort((a,b)=>({'Alpa':0,'Tidak lengkap':1,'Terlambat':2}[a.i.status]-({'Alpa':0,'Tidak lengkap':1,'Terlambat':2}[b.i.status])));
+  const hol=isHoliday(ds),ord={'Alpa':0,'Tidak lengkap':1,'Terlambat':2};
+  const attn=rows.filter(r=>r.i.status in ord).sort((a,b)=>ord[a.i.status]-ord[b.i.status]);
   const days=[];for(let d=pd(ds),k=0;k<21&&days.length<14;k++,d.setDate(d.getDate()-1)){const s=dstr(d);if(!isHoliday(s))days.push(s)}days.reverse();
-  const pct=days.map(s=>{let n=0;S.emps.forEach(e=>{const st=dayInfo(e,s).status;if(st==='Hadir'||st==='Terlambat'||st==='Dinas Luar')n++});return Math.round(n/S.emps.length*100)});
-  const pend=S.spl.filter(s=>s.status==='Diajukan').sort((a,b)=>a.date<b.date?-1:1);
-  return `<div class="head"><div><h1>Ringkasan</h1><p class="sub">${fmtDate(ds)}${hol?' · hari libur':''} · ${S.emps.length} karyawan</p></div>
-    <div class="tools"><button class="btn" data-act="dayprev" aria-label="Hari sebelumnya">←</button><input type="date" id="daysel" data-bind="day" value="${ds}"><button class="btn" data-act="daynext" aria-label="Hari berikutnya">→</button></div></div>
-  <div class="stats">
+  const pct=days.map(s=>{let n=0;E.forEach(e=>{const st=dayInfo(e,s).status;if(st==='Hadir'||st==='Terlambat'||st==='Dinas Luar')n++});return Math.round(n/E.length*100)});
+  const pend=S.spl.filter(s=>s.status==='Disetujui'&&s.date===ds);
+  return tb('Ringkasan harian',`<button class="btn" data-act="dayprev" aria-label="Hari sebelumnya">←</button><input type="date" id="daysel" data-bind="day" value="${ds}"><button class="btn" data-act="daynext" aria-label="Hari berikutnya">→</button>`,`${fmtDate(ds)}${hol?' · hari libur kantor':''} · ${E.length} karyawan aktif`)+
+  `<div class="stats">
     <div class="stat g"><b>${hadir+telat+dinas}</b><span>Hadir</span></div>
     <div class="stat w"><b>${telat}</b><span>Terlambat</span></div>
     <div class="stat"><b>${izin}</b><span>Izin / sakit / cuti</span></div>
@@ -295,110 +369,229 @@ V.ringkasan=()=>{
   <div class="cols">
     <section class="panel"><div class="ph"><h2>Perlu perhatian</h2><span class="muted">${attn.length} orang</span></div>
       <div class="list">${attn.slice(0,9).map(r=>`<div class="item"><div class="t"><b>${esc(r.e.name)}</b><span>${esc(r.e.dept)} · ${r.i.r.in?r.i.r.in+' – '+(r.i.r.out&&r.i.r.n>1?r.i.r.out+(r.i.r.nd?' +1':''):'belum pulang'):'tidak ada scan'}${r.i.late?' · telat '+r.i.late+' mnt':''}</span></div><span class="pill ${pillCls(r.i.status)}">${r.i.status}</span></div>`).join('')||'<div class="empty">Tidak ada yang perlu ditindaklanjuti.</div>'}
-      ${attn.length>9?`<div class="item muted">+${attn.length-9} lainnya, lihat di <a href="#rekap">Rekap bulanan</a></div>`:''}</div></section>
-    <section class="panel"><div class="ph"><h2>SPL menunggu persetujuan</h2><span class="muted">${pend.length}</span></div>
+      ${attn.length>9?`<div class="item muted">+${attn.length-9} lainnya, lihat di <a href="#rekap" data-act="go" data-v="rekap">Rekap & tarikan</a></div>`:''}</div></section>
+    <section class="panel"><div class="ph"><h2>SPL pada tanggal ini</h2><span class="muted">${pend.length}</span></div>
       <div class="list">${pend.map(s=>`<div class="item"><div class="t"><b>${fmtDate(s.date)} · ${s.start}–${s.end}</b><span>${esc(s.dept||'')} · ${s.emps.length} orang · ${esc(s.reason)}</span></div>
-        <span class="tools"><button class="btn sm good" data-act="approve" data-id="${esc(s.id)}">Setujui</button><button class="btn sm bad" data-act="reject" data-id="${esc(s.id)}">Tolak</button></span></div>`).join('')||'<div class="empty">Semua SPL sudah diproses.</div>'}</div></section>
+        <button class="btn sm" data-act="viewspl" data-id="${esc(s.id)}">Lihat</button></div>`).join('')||'<div class="empty">Tidak ada SPL pada tanggal ini.</div>'}</div></section>
   </div>
   <section class="panel pad"><div class="ph" style="padding:0 0 22px"><h2>Kehadiran 14 hari kerja terakhir</h2><span class="muted">% karyawan hadir</span></div>
     <div class="bars"><div class="g" style="bottom:100%"><span>100%</span></div><div class="g" style="bottom:50%"><span>50%</span></div>
       ${pct.map((p,i)=>`<div class="bar ${i===pct.length-1?'last':''}" style="height:${p}%" title="${fmtDate(days[i])}: ${p}%"><span>${days[i].slice(8)}</span></div>`).join('')}</div><div style="height:20px"></div></section>`;
 };
 
+/* --- impor fingerprint --- */
 V.impor=()=>{
-  const im=ui.imp;
   const last=(S.imports||[])[0];
-  return `<div class="head"><div><h1>Impor fingerprint</h1><p class="sub">Unggah file dari mesin fingerprint. Format .xlsx, .csv, .txt atau .dat (ID, tanggal, jam).</p></div></div>
-  <label class="drop" id="drop" for="file"><b>Tarik file ke sini atau klik untuk memilih</b>Data yang sudah ada di tanggal yang sama akan diperbarui, status manual tetap aman.</label>
+  return tb('Impor fingerprint','','Unggah file dari mesin fingerprint (.xlsx, .csv, .txt, .dat) berisi ID, tanggal dan jam scan.')+
+  `<label class="drop" id="drop" for="file"><b>Tarik file ke sini atau klik untuk memilih</b>Data di tanggal yang sama diperbarui, status manual tetap aman. Shift malam dan bergilir dikenali otomatis dari jam scan.</label>
   <input type="file" id="file" accept=".xlsx,.xls,.csv,.txt,.dat" hidden>
   <div id="impbox">${impBox()}</div>
-  ${last?`<section class="panel"><div class="ph"><h2>Impor terakhir</h2></div><div class="item"><div class="t"><b>${esc(last.file)}</b><span>${last.at} · ${last.rows} baris scan · ${last.days} hari-orang · ${last.newEmps} karyawan baru</span></div></div></section>`:''}`;
+  ${last?`<section class="panel"><div class="ph"><h2>Impor terakhir</h2></div><div class="item"><div class="t"><b>${esc(last.file)}</b><span>${last.at} · ${last.rows} scan · ${last.days} hari-orang · ${last.newEmps} karyawan baru</span></div></div></section>`:''}`;
 };
-function colName(i){const h=ui.imp.head;return h&&h[i]?h[i]:'Kolom '+(i+1)}
+function colName(im,i){const h=im.head;return h&&h[i]?h[i]:'Kolom '+(i+1)}
+function colOpts(im,sel,none){return (none?`<option value="-1" ${sel<0?'selected':''}>${none}</option>`:'')+Array.from({length:im.ncol},(_,i)=>`<option value="${i}" ${i===sel?'selected':''}>${esc(colName(im,i))}</option>`).join('')}
 function impBox(){
   const im=ui.imp;if(!im)return '';
   if(im.err)return `<div class="panel pad" style="color:var(--bad)">${esc(im.err)}</div>`;
-  const n=im.ncol,opt=(sel,none)=>(none?`<option value="-1" ${sel<0?'selected':''}>${none}</option>`:'')+Array.from({length:n},(_,i)=>`<option value="${i}" ${i===sel?'selected':''}>${esc(colName(i))}</option>`).join('');
   const r=im.res;
   return `<section class="panel pad" style="display:flex;flex-direction:column;gap:16px">
     <div><h2>Cocokkan kolom</h2><p class="sub">${esc(im.file)} · ${im.rows.length} baris. Sudah ditebak otomatis, ubah bila keliru.</p></div>
     <div class="mapgrid">
-      <label class="f">ID / PIN<select data-bind="map" data-k="id">${opt(im.map.id)}</select></label>
-      <label class="f">Nama (opsional)<select data-bind="map" data-k="name">${opt(im.map.name,'Tidak ada')}</select></label>
-      <label class="f">Tanggal & waktu<select data-bind="map" data-k="dt">${opt(im.map.dt)}</select></label>
-      <label class="f">Jam terpisah (opsional)<select data-bind="map" data-k="tm">${opt(im.map.tm,'Tidak ada')}</select></label></div>
+      <label class="f">ID / PIN<select data-bind="map" data-k="id">${colOpts(im,im.map.id)}</select></label>
+      <label class="f">Nama (opsional)<select data-bind="map" data-k="name">${colOpts(im,im.map.name,'Tidak ada')}</select></label>
+      <label class="f">Tanggal & waktu<select data-bind="map" data-k="dt">${colOpts(im,im.map.dt)}</select></label>
+      <label class="f">Jam terpisah (opsional)<select data-bind="map" data-k="tm">${colOpts(im,im.map.tm,'Tidak ada')}</select></label></div>
     ${r?`<div class="stats"><div class="stat"><b>${r.valid}</b><span>Scan terbaca</span></div><div class="stat ${r.bad?'w':''}"><b>${r.bad}</b><span>Baris dilewati</span></div><div class="stat"><b>${r.ids.size}</b><span>Karyawan</span></div><div class="stat ${r.unknown?'w':''}"><b>${r.unknown}</b><span>ID belum terdaftar</span></div><div class="stat"><b>${r.groups.size}</b><span>Hari-orang</span></div></div>
-    <p class="sub">Periode ${r.min?fmtDate(r.min)+' sampai '+fmtDate(r.max):'—'}. Masuk = scan pertama, pulang = scan terakhir. Scan tunggal ditandai "Tidak lengkap". Untuk karyawan shift malam, scan sebelum jam 12:00 dihitung sebagai jam pulang hari sebelumnya.</p>
+    <p class="sub">Periode ${r.min?fmtDate(r.min)+' sampai '+fmtDate(r.max):'—'}. Masuk = scan pertama, pulang = scan terakhir; scan tunggal ditandai "Tidak lengkap". Untuk karyawan shift malam dan bergilir, scan dikelompokkan per giliran kerja dan shift ditentukan dari jam masuk.${r.unknown?' ID yang belum terdaftar ditambahkan sebagai karyawan baru dengan jadwal tetap Kantor. Sebaiknya impor daftar karyawan dulu.':''}</p>
     <div class="tools"><button class="btn primary" data-act="applyimp" ${r.valid?'':'disabled'}>Terapkan ke absensi</button><button class="btn" data-act="cancelimp">Batal</button></div>`:''}
   </section>`;
 }
 
-V.rekap=()=>`<div class="head"><div><h1>Rekap bulanan</h1><p class="sub">Klik baris untuk melihat dan mengoreksi per hari. Nominal lembur adalah estimasi untuk dicek bagian penggajian.</p></div>
-  <div class="tools"><input type="date" id="from" data-bind="from" value="${ui.from}" aria-label="Dari tanggal"><span class="muted">sampai</span><input type="date" id="to" data-bind="to" value="${ui.to}" aria-label="Sampai tanggal"><select id="preset" data-bind="preset" aria-label="Pilih cepat"><option value="">Pilih cepat</option><option value="cur">Bulan terakhir (sampai data terbaru)</option><option value="prev">Bulan sebelumnya</option><option value="14">14 hari terakhir</option><option value="7">7 hari terakhir</option></select><select data-bind="dept" id="deptsel">${deptOpts(ui.dept)}</select><input type="text" id="q" data-bind="q" placeholder="Cari nama atau ID" value="${esc(ui.q)}"><button class="btn" data-act="copyrekap">Salin untuk Excel</button></div></div>
-  <section class="panel"><div id="list">${LST.rekap()}</div></section>`;
+/* --- rekap & tarikan --- */
+V.rekap=()=>tb('Rekap & tarikan',rangeCtl(),'Pilih rentang tanggal untuk menarik data gaji mingguan, 2 mingguan atau bulanan. Nominal lembur adalah estimasi untuk dicek bagian penggajian.')+
+  `<section class="panel"><div class="tools" style="padding:12px 14px;border-bottom:1px solid var(--line)"><select data-bind="pay" id="paysel">${payOpts(ui.pay)}</select><select data-bind="dept" id="deptsel">${deptOpts(ui.dept)}</select><input type="text" id="q" data-bind="q" placeholder="Cari nama, ID, jabatan" value="${esc(ui.q)}"><span style="flex:1"></span><button class="btn" data-act="copyrekap">Salin untuk Excel</button></div><div id="list">${LST.rekap()}</div></section>`;
 LST.rekap=()=>{
-  const RD=rangeDays(),rows=S.emps.filter(matchQ).map(e=>({e,o:recap(e,RD)}));
-  const tot=rows.reduce((a,r)=>a+r.o.otMin,0);
-  const sl=rows.slice(ui.page*PS,(ui.page+1)*PS);
-  return `<div class="pager" style="border:0;border-bottom:1px solid var(--line)"><span>${fmtDate(ui.from)} sampai ${fmtDate(ui.to)} (${RD.length} hari) · ${rows.length} karyawan · lembur dibayar <b class="num">${fmtH(tot)}</b> jam · estimasi <b class="num">${rp(tot/60*S.set.rate)}</b></span></div>
-  <div class="scroll"><table><thead><tr><th>Karyawan</th><th class="n">Hadir</th><th class="n">Telat</th><th class="n">Izin/Sakit/Cuti</th><th class="n">Alpa</th><th class="n">Tdk lengkap</th><th class="n">Lembur (jam)</th><th class="n">Estimasi lembur</th></tr></thead>
-  <tbody>${sl.map(({e,o})=>`<tr class="click" data-act="open" data-id="${esc(e.id)}"><td><b>${esc(e.name)}</b><br><span class="muted">${esc(e.id)} · ${esc(e.dept)}</span></td>
-    <td class="n">${o.hadir}</td><td class="n ${o.telat?'':'dim'}">${o.telat}</td><td class="n ${o.izin?'':'dim'}">${o.izin}</td><td class="n" style="${o.alpa?'color:var(--bad)':'color:var(--muted)'}">${o.alpa}</td><td class="n ${o.inc?'':'dim'}">${o.inc}</td>
-    <td class="n">${o.otMin?fmtH(o.otMin):'<span class="muted">0</span>'}${o.noSpl?` <span class="pill warn" title="Lembur tanpa SPL">${o.noSpl} tanpa SPL</span>`:''}</td><td class="n ${o.amt?'':'dim'}">${o.amt?rp(o.amt):'0'}</td></tr>`).join('')||'<tr><td colspan="8" class="empty">Tidak ada data.</td></tr>'}</tbody></table></div>${pager(rows.length)}`;
+  const RD=rangeDays();
+  const rows=S.emps.filter(matchQ).map(e=>({e,o:recap(e,RD)})).filter(({e,o})=>!e.off||o.hadir+o.izin+o.inc>0);
+  const tot=rows.reduce((a,r)=>a+r.o.otMin,0),amt=rows.reduce((a,r)=>a+r.o.amt,0),sl=rows.slice(ui.page*PS,(ui.page+1)*PS);
+  return `<div class="pager top"><span>${fmtDate(ui.from)} sampai ${fmtDate(ui.to)} (${RD.length} hari) · ${rows.length} karyawan · lembur dibayar <b class="num">${fmtH(tot)}</b> jam · estimasi <b class="num">${rp(amt)}</b></span></div>
+  <div class="scroll"><table><thead><tr><th>Karyawan</th><th>Gaji</th><th class="n">Hadir</th><th class="n">Telat</th><th class="n">Izin/Sakit/Cuti</th><th class="n">Alpa</th><th class="n">Tdk lengkap</th><th class="n">Lembur (jam)</th><th class="n">Estimasi lembur</th></tr></thead>
+  <tbody>${sl.map(({e,o})=>`<tr class="click" data-act="open" data-id="${esc(e.id)}"><td><b>${esc(e.name)}</b>${e.off?' <span class="pill">nonaktif</span>':''}${o.un?` <span class="pill warn" title="Shift hari-hari ini perlu dicek">${o.un} shift perlu cek</span>`:''}<br><span class="muted">${esc(e.id)} · ${esc(e.dept)}${e.pos?' · '+esc(e.pos):''}</span></td><td><span class="pill">${esc(e.pay)}</span></td>
+    <td class="n">${o.hadir}</td><td class="n ${o.telat?'':'dim'}">${o.telat}</td><td class="n ${o.izin?'':'dim'}">${o.izin}</td>
+    <td class="n" style="${o.alpa?'color:var(--bad)':'color:var(--muted)'}">${o.alpa}${o.noscan?` <span class="muted" title="Hari tanpa scan karyawan bergilir (jadwal belum diketahui)">+${o.noscan}</span>`:''}</td><td class="n ${o.inc?'':'dim'}">${o.inc}</td>
+    <td class="n">${o.otMin?fmtH(o.otMin):'<span class="muted">0</span>'}${o.noSpl?` <span class="pill warn" title="Lembur tanpa SPL">${o.noSpl} tanpa SPL</span>`:''}</td><td class="n ${o.amt?'':'dim'}">${o.amt?rp(o.amt):'0'}</td></tr>`).join('')||'<tr><td colspan="9" class="empty">Tidak ada data.</td></tr>'}</tbody></table></div>${pager(rows.length)}`;
 };
 
-V.lembur=()=>`<div class="head"><div><h1>Lembur & SPL</h1><p class="sub">Lembur dibayar hanya untuk karyawan berhak yang punya SPL disetujui, sebesar yang lebih kecil antara jam SPL dan jam nyata.</p></div>
-  <div class="tools"><button class="btn primary" data-act="newspl">Buat SPL</button></div></div>
-  <div class="tools" style="justify-content:space-between"><div class="tabs" id="spltabs">${['Diajukan','Disetujui','Ditolak','Semua','Tanpa SPL'].map(t=>`<button data-act="spltab" data-id="${t}" class="${ui.splTab===t?'on':''}">${t}${t==='Diajukan'&&pendingN()?` (${pendingN()})`:''}</button>`).join('')}</div>${ui.splTab==='Tanpa SPL'?monthSel():''}</div>
-  <section class="panel"><div id="list">${LST.lembur()}</div></section>`;
+/* --- lembur & spl --- */
+V.lembur=()=>{
+  const tab=ui.splTab,title={'Semua':'Semua SPL','Dibatalkan':'SPL dibatalkan','Tanpa SPL':'Lembur tanpa SPL'}[tab]||'Semua SPL';
+  const right=(tab==='Tanpa SPL'?rangeCtl():'')+`<button class="btn primary" data-act="newspl">Buat SPL</button>`;
+  return tb(title,right,tab==='Tanpa SPL'?'Karyawan yang pulang melewati jam shift tanpa SPL disetujui. Jam ini tidak dibayar.':'SPL yang dibuat langsung berlaku. Lembur dibayar untuk karyawan berhak, sebesar yang lebih kecil antara jam SPL dan jam nyata.')+`<section class="panel"><div id="list">${LST.lembur()}</div></section>`;
+};
 LST.lembur=()=>{
   if(ui.splTab==='Tanpa SPL'){
-    const rows=[];S.emps.forEach(e=>daysOf(ui.month).forEach(ds=>{const i=dayInfo(e,ds);if(i.flag)rows.push({e,ds,i})}));
+    const rows=[],RD=rangeDays();actE().forEach(e=>RD.forEach(ds=>{const i=dayInfo(e,ds);if(i.flag)rows.push({e,ds,i})}));
     rows.sort((a,b)=>a.ds<b.ds?-1:a.ds>b.ds?1:0);
-    return `<div class="scroll"><table><thead><tr><th>Tanggal</th><th>Karyawan</th><th>Pulang</th><th class="n">Lembur nyata</th><th>Keterangan</th></tr></thead><tbody>${rows.slice(0,200).map(({e,ds,i})=>`<tr><td>${fmtDate(ds)}</td><td><b>${esc(e.name)}</b><br><span class="muted">${esc(e.dept)}</span></td><td class="n">${i.r.out}${i.r.nd?' +1':''}</td><td class="n">${fmtH(i.ot)} jam</td><td><span class="pill ${i.flag==='Tanpa SPL'?'warn':'bad'}">${i.flag}</span></td></tr>`).join('')||'<tr><td colspan="5" class="empty">Tidak ada lembur di luar SPL pada bulan ini.</td></tr>'}</tbody></table></div>${rows.length>200?`<div class="pager"><span>Menampilkan 200 dari ${rows.length}</span></div>`:''}`;
+    return `<div class="scroll"><table><thead><tr><th>Tanggal</th><th>Karyawan</th><th>Pulang</th><th class="n">Lembur nyata</th><th>Keterangan</th></tr></thead><tbody>${rows.slice(0,200).map(({e,ds,i})=>`<tr><td>${fmtDate(ds)}</td><td><b>${esc(e.name)}</b><br><span class="muted">${esc(e.dept)}</span></td><td class="n">${i.r.out}${i.r.nd?' +1':''}</td><td class="n">${fmtH(i.ot)} jam</td><td><span class="pill ${i.flag==='Tanpa SPL'?'warn':'bad'}">${i.flag}</span></td></tr>`).join('')||'<tr><td colspan="5" class="empty">Tidak ada lembur di luar SPL pada rentang ini.</td></tr>'}</tbody></table></div>${rows.length>200?`<div class="pager"><span>Menampilkan 200 dari ${rows.length}</span></div>`:''}`;
   }
-  const rows=S.spl.filter(s=>ui.splTab==='Semua'||s.status===ui.splTab).sort((a,b)=>a.date<b.date?1:-1);
-  return `<div class="scroll"><table><thead><tr><th>Nomor</th><th>Tanggal</th><th>Jam</th><th>Departemen</th><th class="n">Orang</th><th class="n">Biaya maks.</th><th>Pekerjaan</th><th>Status</th><th></th></tr></thead><tbody>
-  ${rows.map(s=>`<tr><td class="mono">${esc(s.id)}</td><td>${fmtDate(s.date)}</td><td class="n">${s.start}–${s.end}</td><td>${esc(s.dept||'—')}</td><td class="n">${s.emps.length}</td><td class="n">${rp(s.emps.length*dur(s)/60*S.set.rate)}</td><td>${esc(s.reason)}</td>
-    <td><span class="pill ${s.status==='Disetujui'?'good':s.status==='Ditolak'?'bad':'warn'}">${s.status}</span></td>
-    <td><span class="tools" style="flex-wrap:nowrap">${s.status==='Diajukan'?`<button class="btn sm good" data-act="approve" data-id="${esc(s.id)}">Setujui</button><button class="btn sm bad" data-act="reject" data-id="${esc(s.id)}">Tolak</button>`:''}<button class="btn sm" data-act="viewspl" data-id="${esc(s.id)}">Lihat</button></span></td></tr>`).join('')||'<tr><td colspan="9" class="empty">Belum ada SPL di tab ini.</td></tr>'}</tbody></table></div>`;
+  const EM=EMap(),rows=S.spl.filter(s=>ui.splTab==='Semua'||s.status===ui.splTab).sort((a,b)=>a.date<b.date?1:-1);
+  return `<div class="scroll"><table><thead><tr><th>Nomor</th><th>Tanggal shift</th><th>Jam</th><th>Departemen</th><th class="n">Orang</th><th class="n">Biaya maks.</th><th>Pekerjaan</th><th>Status</th><th></th></tr></thead><tbody>
+  ${rows.map(s=>`<tr><td class="mono">${esc(s.id)}${s.ed?` <span class="pill" title="Diubah ${esc(s.ed)}">diubah</span>`:''}</td><td>${fmtDate(s.date)}</td><td class="n">${s.start}–${s.end}</td><td>${esc(s.dept||'—')}</td><td class="n">${s.emps.length}</td><td class="n">${rp(splCost(s,EM))}</td><td>${esc(s.reason)}${s.note?`<br><span class="muted">${esc(s.note)}</span>`:''}</td>
+    <td><span class="pill ${s.status==='Disetujui'?'good':s.status==='Dibatalkan'?'bad':'warn'}">${s.status}</span></td>
+    <td><span class="tools" style="flex-wrap:nowrap">${s.status==='Disetujui'?`<button class="btn sm" data-act="editspl" data-id="${esc(s.id)}">Edit</button><button class="btn sm bad" data-act="cancelspl" data-id="${esc(s.id)}">${ui.cx===s.id?'Yakin batalkan?':'Batalkan'}</button>`:`<button class="btn sm" data-act="restorespl" data-id="${esc(s.id)}">Aktifkan lagi</button>`}<button class="btn sm" data-act="viewspl" data-id="${esc(s.id)}">Lihat</button></span></td></tr>`).join('')||'<tr><td colspan="9" class="empty">Belum ada SPL di bagian ini.</td></tr>'}</tbody></table></div>`;
 };
 
-V.karyawan=()=>`<div class="head"><div><h1>Karyawan</h1><p class="sub">Atur siapa yang berhak lembur dan jadwal shift masing-masing.</p></div>
-  <div class="tools"><select data-bind="dept" id="deptsel">${deptOpts(ui.dept)}</select><input type="text" id="q" data-bind="q" placeholder="Cari nama atau ID" value="${esc(ui.q)}"><button class="btn primary" data-act="newemp">Tambah</button></div></div>
-  <section class="panel"><div id="list">${LST.karyawan()}</div></section>`;
+/* --- karyawan --- */
+V.karyawan=()=>tb('Daftar karyawan',`<button class="btn" data-act="go" data-v="impor-karyawan">Impor karyawan</button><button class="btn bad" data-act="delallmodal">Hapus semua</button><button class="btn primary" data-act="newemp">Tambah</button>`,'Atur jadwal, kelompok gaji, tarif lembur dan siapa yang berhak lembur. Centang beberapa orang untuk mengubah sekaligus.')+
+  `<section class="panel"><div class="tools" style="padding:12px 14px;border-bottom:1px solid var(--line)"><select data-bind="dept" id="deptsel">${deptOpts(ui.dept)}</select><select data-bind="pay" id="paysel">${payOpts(ui.pay)}</select><input type="text" id="q" data-bind="q" placeholder="Cari nama, ID, jabatan" value="${esc(ui.q)}"><label class="tools" style="gap:8px;font-weight:600"><span class="sw"><input type="checkbox" data-bind="showoff" ${ui.showOff?'checked':''} aria-label="Tampilkan nonaktif"><i></i></span>Tampilkan nonaktif</label></div><div id="list">${LST.karyawan()}</div></section>`;
+const kRows=()=>S.emps.filter(e=>matchQ(e)&&(ui.showOff||!e.off));
 LST.karyawan=()=>{
-  const rows=S.emps.filter(matchQ),sl=rows.slice(ui.page*PS,(ui.page+1)*PS),ot=S.emps.filter(e=>e.ot).length;
-  return `<div class="pager" style="border:0;border-bottom:1px solid var(--line)"><span>${S.emps.length} karyawan · ${ot} berhak lembur</span></div>
-  <div class="scroll"><table><thead><tr><th>ID</th><th>Nama</th><th>Departemen</th><th>Shift</th><th>Boleh lembur</th></tr></thead><tbody>
-  ${sl.map(e=>`<tr><td class="mono">${esc(e.id)}</td><td><b>${esc(e.name)}</b></td><td>${esc(e.dept)}</td>
-   <td><select data-bind="empshift" data-id="${esc(e.id)}" aria-label="Shift">${S.set.shifts.map(s=>`<option value="${s.id}" ${s.id===e.shift?'selected':''}>${esc(s.name)} ${s.start}–${s.end}</option>`).join('')}</select></td>
-   <td>${sw('empot',e.id,e.ot)}</td></tr>`).join('')||'<tr><td colspan="5" class="empty">Tidak ada karyawan.</td></tr>'}</tbody></table></div>${pager(rows.length)}`;
+  const rows=kRows(),sl=rows.slice(ui.page*PS,(ui.page+1)*PS),n=ui.sel.size;
+  const allOn=rows.length&&rows.every(e=>ui.sel.has(e.id));
+  return (n?`<div class="bulk"><b>${n} dipilih</b><button class="btn sm" data-act="bk" data-f="ot" data-v="1">Izinkan lembur</button><button class="btn sm" data-act="bk" data-f="ot" data-v="0">Cabut lembur</button><button class="btn sm" data-act="bk" data-f="sched" data-v="bergilir">Jadwal bergilir</button><button class="btn sm" data-act="bk" data-f="sched" data-v="tetap">Jadwal tetap</button>
+   <select data-bind="bkpay" aria-label="Kelompok gaji"><option value="">Kelompok gaji…</option>${PAYS.map(p=>`<option>${p}</option>`).join('')}</select><select data-bind="bkshift" aria-label="Shift tetap"><option value="">Shift tetap…</option>${S.set.shifts.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select>
+   <input type="number" id="bkrate" min="0" step="500" placeholder="Tarif/jam" style="width:110px"><button class="btn sm" data-act="bkrate">Terapkan tarif</button><button class="btn sm bad" data-act="bk" data-f="off" data-v="1">Nonaktifkan</button><button class="btn sm" data-act="bk" data-f="off" data-v="0">Aktifkan</button><button class="btn sm bad" data-act="delselmodal">Hapus terpilih</button><button class="btn sm" data-act="bkclear">Batal pilih</button></div>`:'')+
+  `<div class="scroll"><table><thead><tr><th><label class="sw" title="Pilih semua yang tampil"><input type="checkbox" data-act="selall" ${allOn?'checked':''} aria-label="Pilih semua"><i></i></label></th><th>ID</th><th>Nama</th><th>Departemen</th><th>Jadwal</th><th>Shift tetap</th><th>Kelompok gaji</th><th>Tarif/jam</th><th>Lembur</th><th>Aktif</th></tr></thead><tbody>
+  ${sl.map(e=>`<tr class="${e.off?'off':''}"><td>${sw('sel',e.id,ui.sel.has(e.id),'','Pilih')}</td><td class="mono">${esc(e.id)}</td><td style="white-space:nowrap"><button class="lnk" data-act="open" data-id="${esc(e.id)}">${esc(e.name)}</button>${e.pos?`<br><span class="muted">${esc(e.pos)}</span>`:''}</td><td>${esc(e.dept)}</td>
+   <td><select data-bind="emp" data-f="sched" data-id="${esc(e.id)}" aria-label="Jadwal"><option value="tetap" ${e.sched==='tetap'?'selected':''}>Tetap</option><option value="bergilir" ${e.sched==='bergilir'?'selected':''}>Bergilir</option></select></td>
+   <td><select data-bind="emp" data-f="shift" data-id="${esc(e.id)}" aria-label="Shift" ${e.sched==='bergilir'?'disabled':''}>${S.set.shifts.map(s=>`<option value="${s.id}" ${s.id===e.shift?'selected':''}>${esc(s.name)}</option>`).join('')}</select></td>
+   <td><select data-bind="emp" data-f="pay" data-id="${esc(e.id)}" aria-label="Kelompok gaji">${PAYS.map(p=>`<option ${p===e.pay?'selected':''}>${p}</option>`).join('')}</select></td>
+   <td><input type="number" min="0" step="500" style="width:90px" data-bind="emp" data-f="rate" data-id="${esc(e.id)}" value="${e.rate||''}" placeholder="${S.set.rate}" aria-label="Tarif lembur per jam"></td>
+   <td>${sw('emp',e.id,e.ot,'data-f="ot"','Boleh lembur')}</td><td>${sw('emp',e.id,!e.off,'data-f="on"','Aktif')}</td></tr>`).join('')||'<tr><td colspan="10" class="empty">Tidak ada karyawan.</td></tr>'}</tbody></table></div>${pager(rows.length)}
+  <div class="pager"><span>${S.emps.length} karyawan · ${actE().length} aktif · ${S.emps.filter(e=>e.ot&&!e.off).length} berhak lembur · tarif kosong memakai tarif umum ${rp(S.set.rate)}</span></div>`;
 };
 
-V.pengaturan=()=>`<div class="head"><div><h1>Pengaturan</h1><p class="sub">Aturan ini dipakai untuk menghitung status hadir dan lembur.</p></div></div>
-  <section class="panel pad" style="display:flex;flex-direction:column;gap:16px"><h2>Jam kerja</h2>
-    ${S.set.shifts.map((s,i)=>`<div class="form"><label class="f">Nama shift<input type="text" data-bind="shiftf" data-i="${i}" data-k="name" value="${esc(s.name)}"></label><label class="f">Masuk<input type="time" data-bind="shiftf" data-i="${i}" data-k="start" value="${s.start}"></label><label class="f">Pulang<input type="time" data-bind="shiftf" data-i="${i}" data-k="end" value="${s.end}"></label></div>`).join('')}
-    <p class="sub">Jika jam pulang lebih awal dari jam masuk (misalnya 23:00–07:00), shift dianggap melewati tengah malam dan dicatat pada tanggal masuk.</p></section>
-  <section class="panel pad" style="display:flex;flex-direction:column;gap:16px"><h2>Aturan</h2>
-    <div class="form"><label class="f">Toleransi terlambat (menit)<input type="number" min="0" data-bind="setn" data-k="tol" value="${S.set.tol}"></label><label class="f">Lembur minimal (menit)<input type="number" min="0" step="5" data-bind="setn" data-k="minOT" value="${S.set.minOT}"></label><label class="f">Tarif lembur per jam (Rp)<input type="number" min="0" step="500" data-bind="setn" data-k="rate" value="${S.set.rate||0}"></label></div>
-    <label style="display:flex;gap:10px;align-items:center;font-weight:600"><span class="sw"><input type="checkbox" data-bind="sat" ${S.set.sat?'checked':''}><i></i></span>Sabtu termasuk hari kerja</label>
-    <p class="sub">Nominal lembur = jam lembur dibayar × tarif per jam, tanpa pengali. Angka ini estimasi untuk dicek lagi oleh bagian penggajian. Jam dibayar dibulatkan ke bawah per 30 menit.</p></section>
-  <section class="panel pad" style="display:flex;flex-direction:column;gap:12px"><h2>Hari libur</h2>
-    <div class="tools"><input type="date" id="holin"><button class="btn" data-act="addhol">Tambah</button></div>
-    <div class="tools">${S.set.holidays.slice().sort().map(h=>`<span class="pill info">${fmtDate(h)} <a href="#pengaturan" data-act="delhol" data-id="${h}" aria-label="Hapus" style="text-decoration:none;margin-left:4px">×</a></span>`).join('')||'<span class="muted">Belum ada.</span>'}</div></section>
-  <section class="panel pad" style="display:flex;flex-direction:column;gap:12px"><h2>Data</h2>
-    <div class="tools"><button class="btn" data-act="demo">Muat data contoh (224 karyawan)</button>
-    <button class="btn bad" data-act="wipe">${ui.confirm?'Klik lagi untuk menghapus semua':'Hapus semua data'}</button></div>
-    <p class="sub">Prototipe ini menyimpan data di browser ini saja. Untuk dipakai bersama, data perlu dipindah ke server.</p></section>`;
+/* --- impor karyawan --- */
+const EF=[['id','ID / PIN fingerprint',/pin|\bid\b|nik|badge|no\.?\s*id/i],['name','Nama',/nama|name/i],['dept','Departemen',/dept|departemen|bagian|divisi/i],['pos','Jabatan',/jabatan|posisi|position/i],['sched','Jenis jadwal',/jadwal|schedule/i],['shift','Shift tetap',/shift/i],['pay','Kelompok gaji',/gaji|kelompok|periode|payroll/i],['rate','Tarif lembur',/tarif|rate/i],['ot','Boleh lembur',/lembur|overtime|\bot\b/i],['off','Status',/status|aktif/i]];
+const TEMPLATE='ID/PIN\tNama\tDepartemen\tJabatan\tJenis jadwal\tShift tetap\tKelompok gaji\tTarif lembur\tBoleh lembur\tStatus\n1001\tContoh Satu\tProduksi\tOperator\tBergilir\t\tMingguan\t\tYa\tAktif\n2001\tContoh Dua\tAdmin\tStaf\tTetap\tKantor\tBulanan\t\tTidak\tAktif';
+V['impor-karyawan']=()=>tb('Impor karyawan','<button class="btn" data-act="copytpl">Salin template</button><button class="btn" data-act="dltpl">Unduh template</button>','Unggah daftar karyawan dari Excel atau CSV, atau tempel langsung dari Excel. ID harus sama dengan PIN di mesin fingerprint.')+
+  `<label class="drop" id="drop2" for="file2"><b>Tarik file daftar karyawan ke sini atau klik untuk memilih</b>.xlsx, .csv atau .txt dengan baris judul di baris pertama</label>
+  <input type="file" id="file2" accept=".xlsx,.xls,.csv,.txt" hidden>
+  <section class="panel pad" style="display:flex;flex-direction:column;gap:10px"><h2>Atau tempel dari Excel</h2><textarea id="paste" rows="4" placeholder="Salin sel-sel di Excel (termasuk baris judul) lalu tempel di sini"></textarea><div><button class="btn" data-act="readpaste">Baca data tempelan</button></div></section>
+  <div id="iebox">${ieBox()}</div>`;
+function parseText(t){
+  const lines=t.split(/\r?\n/).filter(l=>l.trim()),l0=lines[0]||'';
+  const dl=l0.includes('\t')?'\t':l0.includes(';')?';':l0.includes(',')?',':/\s+/;
+  return lines.map(l=>l.split(dl).map(x=>x.trim().replace(/^"|"$/g,'')));
+}
+async function readRows(f){
+  const ext=f.name.split('.').pop().toLowerCase();
+  if(ext==='xlsx'||ext==='xls'){
+    if(!window.XLSX)throw new Error('Pustaka Excel belum termuat. Simpan file sebagai CSV lalu unggah lagi.');
+    const wb=XLSX.read(await f.arrayBuffer(),{type:'array',cellDates:true});
+    return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:false,dateNF:'yyyy-mm-dd hh:mm:ss',defval:''}).filter(r=>r.some(c=>String(c).trim()));
+  }
+  return parseText(await f.text());
+}
+function ieGuess(rows){
+  const first=rows[0]||[],hasHead=first.some(c=>/[a-zA-Z]{2,}/.test(c)&&EF.some(f=>f[2].test(c)));
+  const n=Math.max(...rows.slice(0,30).map(r=>r.length),1),map={},used=new Set();
+  EF.forEach(([k,,re],idx)=>{map[k]=-1;if(hasHead)for(let i=0;i<n;i++)if(!used.has(i)&&re.test(String(first[i]))){map[k]=i;used.add(i);break}});
+  if(!hasHead)EF.forEach(([k],i)=>{map[k]=i<n?i:-1});
+  return {head:hasHead?first.map(String):null,data:hasHead?rows.slice(1):rows,map,ncol:n};
+}
+const nrm=s=>String(s||'').trim().toLowerCase();
+function ieAnalyze(){
+  const ie=ui.ie,m=ie.map,seen=new Set(),EM=S.demo?new Map():EMap(),items=[],counts={baru:0,update:0,sama:0,error:0,skip:0},ids=new Set();
+  ie.data.forEach((r,idx)=>{
+    const g=k=>m[k]>=0?String(r[m[k]]??'').trim():'';
+    if(r.every(c=>!String(c).trim()))return;
+    const id=normId(g('id')),name=g('name'),rec={},iss=[];
+    let st='ok';
+    if(!id){st='error';iss.push('ID kosong')}
+    else if(seen.has(id)){st='error';iss.push('ID kembar di file')}
+    if(id)seen.add(id);
+    const ex=id?EM.get(id):null;
+    if(!ex&&!name&&st!=='error'){st='error';iss.push('Nama kosong untuk karyawan baru')}
+    if(name)rec.name=name;
+    if(g('dept'))rec.dept=g('dept');
+    if(g('pos'))rec.pos=g('pos');
+    const sc=nrm(g('sched'));if(sc){if(/gilir|rotasi|shift/.test(sc))rec.sched='bergilir';else if(/tetap|kantor|normal/.test(sc))rec.sched='tetap';else iss.push('Jenis jadwal tidak dikenal ("'+g('sched')+'")')}
+    const sf=nrm(g('shift'));if(sf){const sh=S.set.shifts.find(x=>nrm(x.name)===sf||x.id===sf||sf.includes(x.start));if(sh)rec.shift=sh.id;else iss.push('Shift tidak dikenal ("'+g('shift')+'")')}
+    const py=nrm(g('pay'));if(py){if(/2|dua|bi/.test(py))rec.pay='2 mingguan';else if(/minggu/.test(py))rec.pay='Mingguan';else if(/bulan/.test(py))rec.pay='Bulanan';else iss.push('Kelompok gaji tidak dikenal ("'+g('pay')+'")')}
+    const rt=g('rate').replace(/[^\d]/g,'');if(rt)rec.rate=+rt;
+    const ot=nrm(g('ot'));if(ot){if(/^(ya|y|yes|1|true|boleh|ok)$/.test(ot))rec.ot=true;else if(/^(tidak|t|no|n|0|false|tdk)$/.test(ot))rec.ot=false;else iss.push('Boleh lembur tidak dikenal ("'+g('ot')+'")')}
+    const of=nrm(g('off'));if(of){if(/non|tidak|resign|keluar|berhenti|^0$|^no$|^false$/.test(of))rec.off=true;else rec.off=false}
+    if(st!=='error'){
+      if(!ex)st='baru';
+      else if(ie.mode==='new')st='skip';
+      else st=Object.keys(rec).some(k=>ex[k]!==rec[k])?'update':'sama';
+    }
+    counts[st==='ok'?'sama':st]++;
+    if(id&&st!=='error')ids.add(id);
+    items.push({row:idx+2,id,name,rec,st,iss});
+  });
+  const gone=ie.mode==='sync'&&!S.demo?S.emps.filter(e=>!ids.has(e.id)&&!e.off).length:0;
+  ie.res={items,counts,gone,probs:items.filter(i=>i.st==='error'||i.iss.length)};
+}
+function ieBox(){
+  const ie=ui.ie;if(!ie)return '';
+  if(ie.err)return `<div class="panel pad" style="color:var(--bad)">${esc(ie.err)}</div>`;
+  const r=ie.res,c=r.counts;
+  const colSel=([k,l])=>`<label class="f">${l}<select data-bind="iemap" data-k="${k}">${colOpts(ie,ie.map[k],'Tidak ada')}</select></label>`;
+  return `<section class="panel pad" style="display:flex;flex-direction:column;gap:16px">
+    <div><h2>Cocokkan kolom</h2><p class="sub">${esc(ie.file)} · ${ie.data.length} baris data. Kolom yang tidak ada akan diabaikan; data lama untuk kolom itu tidak diubah.</p></div>
+    <div class="mapgrid">${EF.map(colSel).join('')}</div>
+    <div class="tools"><strong>Mode:</strong>
+      <label class="tools" style="gap:6px"><input type="radio" name="iemode" data-bind="iemode" value="upd" ${ie.mode==='upd'?'checked':''}> Tambah & perbarui</label>
+      <label class="tools" style="gap:6px"><input type="radio" name="iemode" data-bind="iemode" value="new" ${ie.mode==='new'?'checked':''}> Tambah yang baru saja</label>
+      <label class="tools" style="gap:6px"><input type="radio" name="iemode" data-bind="iemode" value="sync" ${ie.mode==='sync'?'checked':''}> Sinkronkan (yang tidak ada di file dinonaktifkan)</label></div>
+    <div class="stats"><div class="stat g"><b>${c.baru}</b><span>Karyawan baru</span></div><div class="stat"><b>${c.update}</b><span>Diperbarui</span></div><div class="stat"><b>${c.sama+c.skip}</b><span>Tanpa perubahan</span></div><div class="stat ${c.error?'b':''}"><b>${c.error}</b><span>Bermasalah (dilewati)</span></div>${ie.mode==='sync'?`<div class="stat w"><b>${r.gone}</b><span>Akan dinonaktifkan</span></div>`:''}</div>
+    ${r.probs.length?`<div><h2>Perlu dicek</h2><ul class="issues">${r.probs.slice(0,8).map(p=>`<li>Baris ${p.row}${p.id?' (ID '+esc(p.id)+')':''}: ${p.iss.map(esc).join(', ')}${p.st==='error'?' – dilewati':' – kolom ini diabaikan'}</li>`).join('')}${r.probs.length>8?`<li>dan ${r.probs.length-8} lainnya</li>`:''}</ul></div>`:''}
+    ${S.demo?'<p class="sub" style="color:var(--warn)">Data contoh yang masih ada (karyawan, absensi, SPL) akan dihapus otomatis saat Anda menerapkan impor ini, supaya tidak tercampur dengan data asli.</p>':''}<p class="sub">Karyawan yang tidak ada di file tidak dihapus, hanya dinonaktifkan jika Anda memilih mode Sinkronkan. Yang nonaktif disembunyikan dari daftar dan tidak masuk hitungan harian.</p>
+    <div class="tools"><button class="btn primary" data-act="applyie" ${c.baru+c.update+(ie.mode==='sync'?r.gone:0)?'':'disabled'}>Terapkan</button><button class="btn" data-act="cancelie">Batal</button></div></section>`;
+}
+function startIe(rows,file){
+  if(!rows.length)throw new Error('Data kosong.');
+  const g=ieGuess(rows);ui.ie={file,rows,head:g.head,data:g.data,map:g.map,ncol:g.ncol,mode:'upd'};ieAnalyze();
+}
+function applyIe(){
+  const ie=ui.ie;if(S.demo){S.emps=[];S.att={};S.spl=[];S.imports=[];S.demo=false;ieAnalyze()}const r=ie.res,ids=new Set();let a=0,u=0;
+  r.items.forEach(it=>{
+    if(it.st==='error')return;ids.add(it.id);
+    const clean={...it.rec};
+    if(it.st==='baru'){S.emps.push({id:it.id,name:'Karyawan '+it.id,dept:'Belum diatur',pos:'',sched:'tetap',shift:S.set.shifts[0].id,pay:'Bulanan',rate:0,ot:false,off:false,...clean});a++}
+    else if(it.st==='update'){Object.assign(S.emps.find(e=>e.id===it.id),clean);u++}
+  });
+  let off=0;if(ie.mode==='sync')S.emps.forEach(e=>{if(!ids.has(e.id)&&!e.off){e.off=true;off++}});
+  S.emps.sort((x,y)=>x.id.localeCompare(y.id,undefined,{numeric:true}));
+  if(S.demo&&a)S.demo=false;
+  save();ui.ie=null;render();toast(`Selesai: ${a} baru, ${u} diperbarui${off?', '+off+' dinonaktifkan':''}`);
+}
+
+/* --- pengaturan --- */
+V.pengaturan=()=>{
+  const t=ui.setTab,head={jam:'Jam kerja',aturan:'Aturan & tarif',libur:'Hari libur',data:'Data & cadangan'}[t];
+  let body='';
+  if(t==='jam')body=`<section class="panel pad" style="display:flex;flex-direction:column;gap:16px">
+    ${S.set.shifts.map((s,i)=>`<div class="form"><label class="f">Nama shift<input type="text" data-bind="shiftf" data-i="${i}" data-k="name" value="${esc(s.name)}"></label><label class="f">Masuk<input type="time" data-bind="shiftf" data-i="${i}" data-k="start" value="${s.start}"></label><label class="f">Pulang<input type="time" data-bind="shiftf" data-i="${i}" data-k="end" value="${s.end}"></label>
+      <label class="f">Dipakai karyawan bergilir<span style="height:34px;display:flex;align-items:center"><span class="sw"><input type="checkbox" data-bind="shiftrot" data-i="${i}" ${s.rot?'checked':''} aria-label="Dipakai karyawan bergilir"><i></i></span></span></label></div>`).join('')}
+    <p class="sub">Jika jam pulang lebih awal dari jam masuk (misalnya 23:00–07:00), shift dianggap melewati tengah malam dan dicatat pada tanggal masuk. Shift yang ditandai "dipakai karyawan bergilir" menjadi pilihan saat aplikasi menebak shift dari jam scan masuk.</p></section>`;
+  if(t==='aturan')body=`<section class="panel pad" style="display:flex;flex-direction:column;gap:16px">
+    <div class="form"><label class="f">Toleransi terlambat (menit)<input type="number" min="0" data-bind="setn" data-k="tol" value="${S.set.tol}"></label><label class="f">Lembur minimal (menit)<input type="number" min="0" step="5" data-bind="setn" data-k="minOT" value="${S.set.minOT}"></label><label class="f">Tarif lembur umum per jam (Rp)<input type="number" min="0" step="500" data-bind="setn" data-k="rate" value="${S.set.rate||0}"></label></div>
+    <label style="display:flex;gap:10px;align-items:center;font-weight:600"><span class="sw"><input type="checkbox" data-bind="sat" ${S.set.sat?'checked':''}><i></i></span>Sabtu termasuk hari kerja kantor</label>
+    <p class="sub">Nominal lembur = jam lembur dibayar × tarif per jam, tanpa pengali. Tarif di data karyawan (jika diisi) menggantikan tarif umum. Jam dibayar dibulatkan ke bawah per 30 menit. Angka ini estimasi untuk dicek bagian penggajian.</p>
+    <p class="sub">Karyawan bergilir dianggap bekerja sesuai shift yang terdeteksi, termasuk Sabtu dan Minggu. Hari tanpa scan mereka ditampilkan sebagai "Tanpa scan", bukan Alpa, karena jadwal libur mereka belum diketahui.</p></section>`;
+  if(t==='libur')body=`<section class="panel pad" style="display:flex;flex-direction:column;gap:12px"><div class="tools"><input type="date" id="holin"><button class="btn" data-act="addhol">Tambah</button></div>
+    <div class="tools">${S.set.holidays.slice().sort().map(h=>`<span class="pill info">${fmtDate(h)} <a href="#pengaturan" data-act="delhol" data-id="${h}" aria-label="Hapus" style="text-decoration:none;margin-left:4px">×</a></span>`).join('')||'<span class="muted">Belum ada.</span>'}</div><p class="sub">Berlaku untuk karyawan berjadwal tetap.</p></section>`;
+  if(t==='data')body=`<section class="panel pad" style="display:flex;flex-direction:column;gap:14px"><h2>Cadangan</h2>
+    <div class="tools"><button class="btn" data-act="dlbackup">Unduh cadangan</button><button class="btn" data-act="copybackup">Salin cadangan</button><label class="btn" for="restore">Pulihkan dari file</label><input type="file" id="restore" accept=".json,.txt" hidden></div>
+    <p class="sub">Data tersimpan di browser ini saja. Simpan cadangan secara berkala, terutama sebelum membersihkan browser atau pindah komputer. Jika unduhan tidak berjalan, gunakan Salin cadangan lalu tempel ke file teks.</p>
+    <textarea id="restoretxt" rows="3" placeholder="Atau tempel isi cadangan di sini"></textarea><div><button class="btn" data-act="restoretxt">Pulihkan dari teks</button></div></section>
+    <section class="panel pad" style="display:flex;flex-direction:column;gap:12px"><h2>Data contoh</h2><div class="tools">${(S.demo||!S.emps.length)?`<button class="btn" data-act="demo">${ui.cd?'Klik lagi untuk mengganti dengan data contoh baru':'Muat data contoh (224 karyawan)'}</button>`:''}<button class="btn bad" data-act="wipe">${ui.confirm?'Klik lagi untuk menghapus semua':'Hapus semua data'}</button></div>${(S.demo||!S.emps.length)?'':'<p class="sub">Tombol data contoh disembunyikan karena sudah ada data asli. Pilih Hapus semua data bila ingin memakainya lagi.</p>'}</section>`;
+  return tb(head)+body;
+};
 
 /* ---------- drawer & modals ---------- */
 function drawerHTML(e){
   const days=rangeDays(),o=recap(e,days);
-  return `<div class="drawer" role="dialog" aria-label="Detail absensi"><div class="head"><div><h1>${esc(e.name)}</h1><p class="sub">${esc(e.id)} · ${esc(e.dept)} · ${esc(shiftOf(e).name)} ${shiftOf(e).start}–${shiftOf(e).end} · ${e.ot?'berhak lembur':'tidak berhak lembur'}</p></div><button class="btn" data-act="closedrawer">Tutup</button></div>
-  <p class="sub">Periode ${fmtDate(ui.from)} sampai ${fmtDate(ui.to)}</p><div class="stats"><div class="stat g"><b>${o.hadir}</b><span>Hadir</span></div><div class="stat w"><b>${o.telat}</b><span>Telat</span></div><div class="stat b"><b>${o.alpa}</b><span>Alpa</span></div><div class="stat"><b>${fmtH(o.otMin)}</b><span>Jam lembur dibayar</span></div><div class="stat"><b style="font-size:20px">${rp(o.amt)}</b><span>Estimasi lembur</span></div></div>
-  <div class="scroll panel"><table><thead><tr><th>Tanggal</th><th>Masuk</th><th>Pulang</th><th>Status</th><th class="n">Lembur nyata</th><th>SPL</th><th class="n">Dibayar</th><th class="n">Estimasi</th></tr></thead><tbody>
-  ${days.map(ds=>{const i=dayInfo(e,ds),r=i.r;return `<tr class="${i.hol&&!r.in?'off':''}"><td>${fmtDate(ds)}</td><td class="n">${r.in||'—'}</td><td class="n">${r.n>1?r.out+(r.nd?' +1':''):'—'}</td>
+  return `<div class="drawer" role="dialog" aria-label="Detail absensi"><div class="tb" style="padding:0"><div><h1>${esc(e.name)}</h1><p class="sub">${esc(e.id)} · ${esc(e.dept)}${e.pos?' · '+esc(e.pos):''} · ${schedText(e)} · gaji ${esc(e.pay.toLowerCase())} · ${e.ot?'berhak lembur':'tidak berhak lembur'} · ${rp(rateOf(e))}/jam</p></div><button class="btn" data-act="closedrawer">Tutup</button></div>
+  <div class="tools"><span class="muted">Periode</span><input type="date" id="dfrom" data-bind="from" value="${ui.from}" aria-label="Dari tanggal"><span class="muted">sampai</span><input type="date" id="dto" data-bind="to" value="${ui.to}" aria-label="Sampai tanggal"></div>
+  <div class="stats"><div class="stat g"><b>${o.hadir}</b><span>Hadir</span></div><div class="stat w"><b>${o.telat}</b><span>Telat</span></div><div class="stat b"><b>${o.alpa}</b><span>Alpa</span></div><div class="stat"><b>${fmtH(o.otMin)}</b><span>Jam lembur dibayar</span></div><div class="stat"><b style="font-size:20px">${rp(o.amt)}</b><span>Estimasi lembur</span></div></div>
+  <div class="scroll panel"><table><thead><tr><th>Tanggal</th><th>Shift</th><th>Masuk</th><th>Pulang</th><th>Status</th><th class="n">Lembur nyata</th><th>SPL</th><th class="n">Dibayar</th><th class="n">Estimasi</th></tr></thead><tbody>
+  ${days.map(ds=>{const i=dayInfo(e,ds),r=i.r,wk=[0,6].includes(pd(ds).getDay());
+   const shiftCell=i.rot?(r.in?`<select data-bind="shov" data-ds="${ds}" aria-label="Shift ${ds}"><option value="">${esc(i.sh.name)}${r.shov?'':' (otomatis)'}</option>${S.set.shifts.filter(s=>s.rot&&s.id!==(r.shov||'')).map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}${r.shov?'<option value="__auto">Kembali otomatis</option>':''}</select>${i.un?' <span class="pill warn">cek</span>':''}`:'<span class="muted">—</span>'):`<span class="muted">${esc(i.sh.name)}</span>`;
+   return `<tr class="${(i.hol||wk)&&!r.in?'off':''}"><td>${fmtDate(ds)}</td><td>${shiftCell}</td><td class="n">${r.in||'—'}</td><td class="n">${r.n>1?r.out+(r.nd?' +1':''):'—'}</td>
    <td><select data-bind="ov" data-ds="${ds}" aria-label="Status ${ds}"><option value="">${i.status}${r.ov?'':' (otomatis)'}</option>${r.ov?'<option value="__auto">Kembali ke otomatis</option>':''}${['Hadir','Izin','Sakit','Cuti','Dinas Luar','Alpa'].filter(x=>x!==r.ov).map(x=>`<option>${x}</option>`).join('')}</select></td>
    <td class="n">${i.ot?fmtH(i.ot)+' j':'—'}</td><td>${i.spl?`<span class="pill good">${i.spl.start}–${i.spl.end}</span><br><span class="muted mono" style="font-size:11px">${esc(i.spl.id)}</span>`:i.flag?`<span class="pill ${i.flag==='Tanpa SPL'?'warn':'bad'}">${i.flag}</span>`:'—'}</td><td class="n">${i.paid?fmtH(i.paid)+' j':'—'}</td><td class="n">${i.paid?rp(i.amt):'—'}</td></tr>`}).join('')}</tbody></table></div></div>`;
 }
@@ -409,75 +602,74 @@ function modal(html){layer().innerHTML=`<div class="over-ov" data-act="ovclick">
 let pick={sel:new Set(),q:''};
 function pickList(){
   const dp=($('#spl-dept')||{}).value||'';
-  const rows=S.emps.filter(e=>e.ot&&(!dp||e.dept===dp)&&(!pick.q||(e.name+e.id).toLowerCase().includes(pick.q.toLowerCase()))).slice(0,80);
-  return rows.map(e=>`<label><input type="checkbox" data-bind="pick" data-id="${esc(e.id)}" ${pick.sel.has(e.id)?'checked':''}><span><b>${esc(e.name)}</b> <span class="muted">${esc(e.id)} · ${esc(e.dept)}</span></span></label>`).join('')||'<div class="empty">Tidak ada karyawan berhak lembur yang cocok.</div>';
+  const rows=S.emps.filter(e=>((e.ot&&!e.off)||pick.sel.has(e.id))&&(!dp||e.dept===dp)&&(!pick.q||(e.name+e.id).toLowerCase().includes(pick.q.toLowerCase()))).slice(0,80);
+  return rows.map(e=>`<label><input type="checkbox" data-bind="pick" data-id="${esc(e.id)}" ${pick.sel.has(e.id)?'checked':''}><span><b>${esc(e.name)}</b> <span class="muted">${esc(e.id)} · ${esc(e.dept)}${e.pos?' · '+esc(e.pos):''}</span></span></label>`).join('')||'<div class="empty">Tidak ada karyawan berhak lembur yang cocok.</div>';
 }
-function newSplModal(){
-  pick={sel:new Set(),q:''};const ds=TODAY;
-  const elig=[...new Set(S.emps.filter(e=>e.ot).map(e=>e.dept))].sort();
-  modal(`<div class="head"><h1>Buat SPL</h1><button class="btn" data-act="closemodal">Tutup</button></div>
-  <div class="form"><label class="f">Tanggal lembur<input type="date" id="spl-date" value="${ds}"></label><label class="f">Mulai<input type="time" id="spl-start" value="17:00"></label><label class="f">Selesai<input type="time" id="spl-end" value="20:00"></label></div>
-  <label class="f">Pekerjaan / alasan<textarea id="spl-reason" rows="2" placeholder="Contoh: mengejar target produksi"></textarea></label>
-  <div><div class="tools" style="margin-bottom:8px"><strong>Karyawan</strong><span class="muted" id="spl-count">0 dipilih</span><select id="spl-dept" data-bind="spldept"><option value="">Semua departemen</option>${elig.map(d=>`<option>${esc(d)}</option>`).join('')}</select><input type="text" id="spl-q" data-bind="splq" placeholder="Cari"><button class="btn sm" data-act="pickall">Pilih semua yang tampil</button></div>
-  <div class="pick" id="picklist">${pickList()}</div><p class="sub">Hanya karyawan yang berhak lembur yang muncul.</p></div>
+function newSplModal(id){
+  const ed=id?S.spl.find(x=>x.id===id):null;ui.editSpl=ed?ed.id:null;
+  pick={sel:new Set(ed?ed.emps:[]),q:''};
+  const elig=[...new Set(S.emps.filter(e=>(e.ot&&!e.off)||pick.sel.has(e.id)).map(e=>e.dept))].sort();
+  modal(`<div class="tb" style="padding:0"><h1>${ed?'Edit SPL':'Buat SPL'}</h1><button class="btn" data-act="closemodal">Tutup</button></div>
+  <div class="form"><label class="f">Tanggal shift dimulai<input type="date" id="spl-date" value="${ed?ed.date:TODAY}"></label><label class="f">Mulai<input type="time" id="spl-start" value="${ed?ed.start:'17:00'}"></label><label class="f">Selesai<input type="time" id="spl-end" value="${ed?ed.end:'20:00'}"></label></div>
+  <p class="sub" style="margin-top:-8px">Untuk lembur yang melewati tengah malam, isi jam selesai hari berikutnya dan tanggal shift dimulai.</p>
+  <label class="f">Pekerjaan / alasan<textarea id="spl-reason" rows="2" placeholder="Contoh: mengejar target produksi">${ed?esc(ed.reason):''}</textarea></label>
+  <label class="f">Keterangan / disetujui oleh (opsional)<input type="text" id="spl-note" value="${ed?esc(ed.note||''):''}" placeholder="Contoh: disetujui Kepala Produksi, SPL kertas no. 123"></label>
+  <div><div class="tools" style="margin-bottom:8px"><strong>Karyawan</strong><span class="muted" id="spl-count">${pick.sel.size} dipilih</span><select id="spl-dept" data-bind="spldept"><option value="">Semua departemen</option>${elig.map(d=>`<option>${esc(d)}</option>`).join('')}</select><input type="text" id="spl-q" data-bind="splq" placeholder="Cari"><button class="btn sm" data-act="pickall">Pilih semua yang tampil</button></div>
+  <div class="pick" id="picklist">${pickList()}</div><p class="sub">Hanya karyawan aktif yang berhak lembur yang muncul.</p></div>
   <div id="spl-err" style="color:var(--bad)"></div>
-  <div class="tools" style="justify-content:flex-end"><button class="btn" data-act="closemodal">Batal</button><button class="btn primary" data-act="savespl">Ajukan SPL</button></div>`);
+  <div class="tools" style="justify-content:flex-end"><button class="btn" data-act="closemodal">Batal</button><button class="btn primary" data-act="savespl">${ed?'Simpan perubahan':'Simpan SPL'}</button></div>`);
 }
 function saveSpl(){
   const date=$('#spl-date').value,st=$('#spl-start').value,en=$('#spl-end').value,reason=$('#spl-reason').value.trim(),err=m=>$('#spl-err').textContent=m;
   if(!date||!st||!en)return err('Isi tanggal dan jam.');
-  if(en===st)return err('Jam selesai tidak boleh sama dengan jam mulai. Untuk lembur melewati tengah malam, isi jam selesai di hari berikutnya.');
+  if(en===st)return err('Jam selesai tidak boleh sama dengan jam mulai.');
   if(!reason)return err('Isi pekerjaan atau alasan lembur.');
   if(!pick.sel.size)return err('Pilih minimal satu karyawan.');
-  const ids=[...pick.sel],dset=new Set(ids.map(id=>S.emps.find(e=>e.id===id).dept)),mo=date.slice(0,7);
+  const ids=[...pick.sel],EM=EMap(),dset=new Set(ids.map(id=>(EM.get(id)||{dept:'-'}).dept)),mo=date.slice(0,7);
+  if(ui.editSpl){const s=S.spl.find(x=>x.id===ui.editSpl);Object.assign(s,{date,start:st,end:en,reason,dept:dset.size===1?[...dset][0]:'Beberapa departemen',emps:ids,note:$('#spl-note').value.trim(),ed:new Date().toLocaleString('id-ID')});ui.editSpl=null;save();closeAll();render();toast('SPL diperbarui');return}
   const n=S.spl.filter(s=>s.date.slice(0,7)===mo).length+1;
-  S.spl.push({id:`SPL/${mo.slice(0,4)}/${mo.slice(5)}/${String(n).padStart(3,'0')}`,date,start:st,end:en,reason,dept:dset.size===1?[...dset][0]:'Beberapa departemen',emps:ids,status:'Diajukan'});
-  save();closeAll();ui.splTab='Diajukan';render();toast('SPL diajukan');
+  S.spl.push({id:`SPL/${mo.slice(0,4)}/${mo.slice(5)}/${String(n).padStart(3,'0')}`,date,start:st,end:en,reason,dept:dset.size===1?[...dset][0]:'Beberapa departemen',emps:ids,note:$('#spl-note').value.trim(),at:new Date().toLocaleString('id-ID'),status:'Disetujui'});
+  save();closeAll();ui.splTab='Semua';render();toast('SPL disimpan');
 }
 function viewSpl(id){
   const s=S.spl.find(x=>x.id===id);if(!s)return;
-  const emps=s.emps.map(i=>S.emps.find(e=>e.id===i)).filter(Boolean);
-  modal(`<div class="head"><h1>Surat Perintah Lembur</h1><button class="btn" data-act="closemodal">Tutup</button></div>
-  <div class="letter"><div class="tools" style="justify-content:space-between"><span class="mono">${esc(s.id)}</span><span class="pill ${s.status==='Disetujui'?'good':s.status==='Ditolak'?'bad':'warn'}">${s.status}</span></div>
-  <div>Memerintahkan karyawan berikut untuk bekerja lembur pada <b>${fmtDate(s.date)}</b>, pukul <b class="mono">${s.start}–${s.end}</b> (${fmtH(dur(s))} jam)${isHoliday(s.date)?', hari libur':', hari kerja'}.</div>
-  <div class="muted">Pekerjaan: ${esc(s.reason)}</div>
-  <div>Perkiraan biaya maksimal: <b class="mono">${rp(s.emps.length*dur(s)/60*S.set.rate)}</b> <span class="muted">(${s.emps.length} orang × ${fmtH(dur(s))} jam × ${rp(S.set.rate)})</span></div>
-  <div class="scroll"><table><tbody>${emps.map((e,i)=>`<tr><td class="n dim">${i+1}</td><td>${esc(e.name)}</td><td class="mono dim">${esc(e.id)}</td><td class="dim">${esc(e.dept)}</td></tr>`).join('')}</tbody></table></div></div>
+  const EM=EMap(),emps=s.emps.map(i=>EM.get(i)||{id:i,name:'(karyawan sudah dihapus)',dept:''});
+  modal(`<div class="tb" style="padding:0"><h1>Surat Perintah Lembur</h1><button class="btn" data-act="closemodal">Tutup</button></div>
+  <div class="letter"><div class="tools" style="justify-content:space-between"><span class="mono">${esc(s.id)}</span><span class="pill ${s.status==='Disetujui'?'good':s.status==='Dibatalkan'?'bad':'warn'}">${s.status}</span></div>
+  <div>Memerintahkan karyawan berikut untuk bekerja lembur pada shift tanggal <b>${fmtDate(s.date)}</b>, pukul <b class="mono">${s.start}–${s.end}</b> (${fmtH(dur(s))} jam).</div>
+  <div class="muted">Pekerjaan: ${esc(s.reason)}</div>${s.note?`<div class="muted">Keterangan: ${esc(s.note)}</div>`:''}${s.ed?`<div class="muted">Diubah terakhir: ${esc(s.ed)}</div>`:''}
+  <div>Perkiraan biaya maksimal: <b class="mono">${rp(splCost(s,EM))}</b> <span class="muted">(${s.emps.length} orang × ${fmtH(dur(s))} jam, tarif per karyawan)</span></div>
+  <div class="scroll"><table><tbody>${emps.map((e,i)=>`<tr><td class="n dim">${i+1}</td><td>${esc(e.name)}</td><td class="mono dim">${esc(e.id)}</td><td class="dim">${esc(e.dept)}</td><td class="n dim">${rp(rateOf(e))}</td></tr>`).join('')}</tbody></table></div></div>
   <div class="tools" style="justify-content:flex-end"><button class="btn" data-act="copyspl" data-id="${esc(s.id)}">Salin teks SPL</button></div>`);
 }
-function splText(s){const emps=s.emps.map(i=>S.emps.find(e=>e.id===i)).filter(Boolean);
-  return `SURAT PERINTAH LEMBUR\nNo: ${s.id}\nTanggal: ${fmtDate(s.date)}\nJam: ${s.start}-${s.end}\nPekerjaan: ${s.reason}\nStatus: ${s.status}\n\nKaryawan:\n`+emps.map((e,i)=>`${i+1}. ${e.name} (${e.id}) - ${e.dept}`).join('\n')}
+function splText(s){const EM=EMap(),emps=s.emps.map(i=>EM.get(i)||{id:i,name:'(karyawan sudah dihapus)',dept:''});
+  return `SURAT PERINTAH LEMBUR\nNo: ${s.id}\nTanggal shift: ${fmtDate(s.date)}\nJam: ${s.start}-${s.end}\nPekerjaan: ${s.reason}\nStatus: ${s.status}\n\nKaryawan:\n`+emps.map((e,i)=>`${i+1}. ${e.name} (${e.id}) - ${e.dept}`).join('\n')}
 function newEmpModal(){
-  modal(`<div class="head"><h1>Tambah karyawan</h1><button class="btn" data-act="closemodal">Tutup</button></div>
+  modal(`<div class="tb" style="padding:0"><h1>Tambah karyawan</h1><button class="btn" data-act="closemodal">Tutup</button></div>
   <div class="form"><label class="f">ID / PIN fingerprint<input type="text" id="ne-id"></label><label class="f">Nama<input type="text" id="ne-name"></label><label class="f">Departemen<input type="text" id="ne-dept" list="dl"></label><datalist id="dl">${depts().map(d=>`<option value="${esc(d)}">`).join('')}</datalist>
-  <label class="f">Shift<select id="ne-shift">${S.set.shifts.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select></label></div>
+  <label class="f">Jabatan<input type="text" id="ne-pos"></label><label class="f">Jadwal<select id="ne-sched"><option value="tetap">Shift tetap</option><option value="bergilir">Shift bergilir</option></select></label>
+  <label class="f">Shift tetap<select id="ne-shift">${S.set.shifts.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select></label>
+  <label class="f">Kelompok gaji<select id="ne-pay">${PAYS.map(p=>`<option ${p==='Bulanan'?'selected':''}>${p}</option>`).join('')}</select></label><label class="f">Tarif lembur/jam (kosong = umum)<input type="number" id="ne-rate" min="0" step="500"></label></div>
   <label style="display:flex;gap:10px;align-items:center;font-weight:600"><span class="sw"><input type="checkbox" id="ne-ot"><i></i></span>Boleh lembur</label>
   <div id="ne-err" style="color:var(--bad)"></div>
   <div class="tools" style="justify-content:flex-end"><button class="btn" data-act="closemodal">Batal</button><button class="btn primary" data-act="saveemp">Simpan</button></div>`);
 }
 function copyText(t,msg){
-  const fb=()=>modal(`<div class="head"><h1>Salin manual</h1><button class="btn" data-act="closemodal">Tutup</button></div><textarea id="cp" rows="10" style="font-family:var(--num);font-size:12px">${esc(t)}</textarea><p class="sub">Pilih semua teks di atas lalu salin.</p>`);
+  const fb=()=>modal(`<div class="tb" style="padding:0"><h1>Salin manual</h1><button class="btn" data-act="closemodal">Tutup</button></div><textarea id="cp" rows="10" style="font-family:var(--num);font-size:12px">${esc(t)}</textarea><p class="sub">Pilih semua teks di atas lalu salin.</p>`);
   try{navigator.clipboard.writeText(t).then(()=>toast(msg),fb)}catch(e){fb()}
 }
+function download(name,text,type){
+  try{const b=new Blob(['﻿'+text],{type}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();toast('File diunduh')}
+  catch(e){copyText(text,'Unduhan tidak tersedia, teks disalin')}
+}
 
-/* ---------- import ---------- */
+/* ---------- import fingerprint ---------- */
 const DT=/\d{4}[-\/]\d{1,2}[-\/]\d{1,2}|\d{1,2}[-\/.]\d{1,2}[-\/.]\d{2,4}/,TM=/\d{1,2}:\d{2}/;
 function parseDT(s){
   s=String(s).trim();let m=s.match(/(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/),y,mo,d;
   if(m){y=+m[1];mo=+m[2];d=+m[3]}else{m=s.match(/(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})/);if(!m)return null;d=+m[1];mo=+m[2];y=+m[3];if(y<100)y+=2000}
   const t=s.match(/(\d{1,2}):(\d{2})/);if(!t||mo<1||mo>12||d<1||d>31)return null;
   return {date:`${y}-${pad(mo)}-${pad(d)}`,time:pad(+t[1])+':'+t[2]};
-}
-async function readRows(f){
-  const ext=f.name.split('.').pop().toLowerCase();
-  if(ext==='xlsx'||ext==='xls'){
-    if(!window.XLSX)throw new Error('Pustaka Excel belum termuat. Simpan file sebagai CSV lalu unggah lagi.');
-    const wb=XLSX.read(await f.arrayBuffer(),{type:'array',cellDates:true});
-    return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:false,dateNF:'yyyy-mm-dd hh:mm:ss',defval:''}).filter(r=>r.some(c=>String(c).trim()));
-  }
-  const lines=(await f.text()).split(/\r?\n/).filter(l=>l.trim()),l0=lines[0]||'';
-  const dl=l0.includes('\t')?'\t':l0.includes(';')?';':l0.includes(',')?',':/\s+/;
-  return lines.map(l=>l.split(dl).map(x=>x.trim().replace(/^"|"$/g,'')));
 }
 function guess(rows){
   const first=rows[0]||[],hasHead=first.some(c=>/[a-zA-Z]{3,}/.test(c))&&!first.some(c=>DT.test(c));
@@ -495,19 +687,25 @@ function guess(rows){
   return {head,data,map,ncol:n};
 }
 function analyze(){
-  const im=ui.imp,m=im.map,groups=new Map(),ids=new Set(),names={};const nightIds=new Set(S.emps.filter(e=>isNight(shiftOf(e))).map(e=>e.id));let valid=0,bad=0,min='',max='';
+  const im=ui.imp,m=im.map,per={},names={};let valid=0,bad=0;
   im.data.forEach(r=>{
     const id=normId(r[m.id]??'');let s=String(r[m.dt]??'');if(m.tm>=0)s+=' '+(r[m.tm]??'');
     const p=parseDT(s);if(!id||!p){bad++;return}
-    valid++;ids.add(id);if(m.name>=0&&r[m.name])names[id]=String(r[m.name]).trim();
-    let dt=p.date,t=toMin(p.time);
-    if(nightIds.has(id)&&t<720){const x=pd(dt);x.setDate(x.getDate()-1);dt=dstr(x);t+=1440}
-    if(!min||dt<min)min=dt;if(!max||dt>max)max=dt;
-    const k=id+'|'+dt,g=groups.get(k);
-    if(!g)groups.set(k,{a:t,b:t,n:1});else{g.a=Math.min(g.a,t);g.b=Math.max(g.b,t);g.n++}
+    valid++;if(m.name>=0&&r[m.name])names[id]=String(r[m.name]).trim();
+    (per[id]=per[id]||[]).push(dayNum(p.date)*1440+toMin(p.time));
   });
-  const known=new Set(S.emps.map(e=>e.id));
-  im.res={valid,bad,ids,groups,names,min,max,unknown:[...ids].filter(i=>!known.has(i)).length};
+  const EM=EMap(),groups=new Map(),ids=new Set(Object.keys(per));
+  const add=(id,dn,a,b,n)=>{const k=id+'|'+numDate(dn),g=groups.get(k);if(!g)groups.set(k,{a,b,n});else{g.a=Math.min(g.a,a);g.b=Math.max(g.b,b);g.n+=n}};
+  ids.forEach(id=>{
+    const arr=per[id].sort((x,y)=>x-y),e=EM.get(id),sess=e&&(e.sched==='bergilir'||isNight(shiftOf(e)));
+    if(!sess){arr.forEach(v=>{const dn=Math.floor(v/1440),t=v-dn*1440;add(id,dn,t,t,1)});return}
+    let start=arr[0],prev=arr[0],cnt=1;
+    const flush=()=>{const dn=Math.floor(start/1440);add(id,dn,start-dn*1440,prev-dn*1440,cnt)};
+    for(let i=1;i<arr.length;i++){if(arr[i]-prev>600){flush();start=arr[i];cnt=0}prev=arr[i];cnt++}
+    flush();
+  });
+  let min='',max='';groups.forEach((g,k)=>{const d=k.split('|')[1];if(!min||d<min)min=d;if(!max||d>max)max=d});
+  im.res={valid,bad,ids,groups,names,min,max,unknown:[...ids].filter(i=>!EM.has(i)).length};
 }
 async function handleFile(f){
   try{
@@ -518,84 +716,157 @@ async function handleFile(f){
 }
 function applyImport(){
   const r=ui.imp.res;let newE=0;
-  r.ids.forEach(id=>{if(!S.emps.find(e=>e.id===id)){S.emps.push({id,name:r.names[id]||'Karyawan '+id,dept:'Belum diatur',shift:S.set.shifts[0].id,ot:false});newE++}});
-  r.groups.forEach((g,k)=>{const old=S.att[k]||{};S.att[k]={...old,in:fromMin(g.a%1440),out:fromMin(g.b%1440),n:g.n};if(g.b>=1440)S.att[k].nd=1;else delete S.att[k].nd});
+  r.ids.forEach(id=>{if(!S.emps.find(e=>e.id===id)){S.emps.push({id,name:r.names[id]||'Karyawan '+id,dept:'Belum diatur',pos:'',sched:'tetap',shift:S.set.shifts[0].id,pay:'Bulanan',rate:0,ot:false,off:false});newE++}});
+  const EM=EMap();
+  r.groups.forEach((g,k)=>{
+    const id=k.split('|')[0],e=EM.get(id),old=S.att[k]||{},rec={...old,in:fromMin(g.a%1440),out:fromMin(g.b%1440),n:g.n};
+    if(g.b>=1440)rec.nd=1;else delete rec.nd;
+    if(e&&e.sched==='bergilir'){const det=detectShift(g.a%1440);rec.sh=det.id;rec.un=det.dist>120?1:0}else{delete rec.sh;delete rec.un}
+    S.att[k]=rec;
+  });
   (S.imports=S.imports||[]).unshift({file:ui.imp.file,at:new Date().toLocaleString('id-ID'),rows:r.valid,days:r.groups.size,newEmps:newE});
-  ui.month=r.max.slice(0,7);ui.day=r.max;ui.from=r.max.slice(0,7)+'-01';ui.to=r.max;S.emps.sort((a,b)=>a.id.localeCompare(b.id,undefined,{numeric:true}));
+  ui.day=r.max;ui.from=r.max.slice(0,7)+'-01';ui.to=r.max;S.emps.sort((a,b)=>a.id.localeCompare(b.id,undefined,{numeric:true}));
   save();ui.imp=null;render();toast(`Impor selesai: ${r.groups.size} hari-orang`);
 }
 
 /* ---------- render ---------- */
 function render(){
-  $('#nav').innerHTML=VIEWS.map(([k,l])=>`<a href="#${k}" ${ui.view===k?'aria-current="page"':''}>${l}${k==='lembur'&&pendingN()?`<span class="badge">${pendingN()}</span>`:''}</a>`).join('');
-  $('#main').innerHTML=(S.demo?'<div class="banner">Menampilkan data contoh. Hapus di Pengaturan sebelum mengimpor data asli.</div>':'')+V[ui.view]();
+  const cur=secOf(ui.view),sub=subOf(ui.view);
+  $('#menubar').innerHTML=SEC.map(s=>`<a href="#${s.items[0].v}" data-act="go" data-v="${s.items[0].v}" data-sub="${s.items[0].sub||''}" ${s===cur?'aria-current="page"':''}>${s.t}</a>`).join('');
+  const item=cur.items.find(i=>i.v===ui.view&&(!i.sub||i.sub===sub))||cur.items[0];
+  $('#crumb').innerHTML=`<a href="#ringkasan" data-act="go" data-v="ringkasan">Beranda</a> › ${cur.k==='beranda'?'<b>'+item.t+'</b>':cur.t+' › <b>'+item.t+'</b>'}`;
+  $('#side').innerHTML=`<div class="ent"><b>Absensi Karyawan</b><span>${actE().length} karyawan aktif</span></div><div class="sl"><h2>${cur.t}</h2>${cur.items.map(i=>`<a href="#${i.v}" data-act="go" data-v="${i.v}" data-sub="${i.sub||''}" ${i===item?'aria-current="page"':''}>${i.t}</a>`).join('')}</div>`;
+  
+  $('#main').innerHTML=(S.demo?'<div class="banner">Menampilkan data contoh. Hapus di Pengaturan, Data & cadangan, sebelum memakai data asli.</div>':'')+V[ui.view]();
   const d=ui.drawer&&S.emps.find(e=>e.id===ui.drawer);if(d){layer().innerHTML=`<div class="over-ov" data-act="ovclick" style="padding:0;justify-content:flex-end">${drawerHTML(d)}</div>`}
-  if(ui.view==='impor')wireDrop();
+  if(ui.view==='impor')wireDrop('#drop','#file',handleFile);
+  if(ui.view==='impor-karyawan')wireDrop('#drop2','#file2',async f=>{try{startIe(await readRows(f),f.name)}catch(e){ui.ie={err:e.message||'File tidak bisa dibaca.'}}$('#iebox').innerHTML=ieBox()});
+  if(ui.view==='pengaturan'&&ui.setTab==='data'){const rf=$('#restore');if(rf)rf.onchange=async()=>{if(rf.files[0])restore(await rf.files[0].text())}}
 }
 function refresh(){const l=$('#list');if(l)l.innerHTML=LST[ui.view]()}
-function setView(){const h=location.hash.slice(1);ui.view=V[h]?h:'ringkasan';ui.page=0;ui.q='';ui.dept='';ui.confirm=false;closeAll();render();window.scrollTo(0,0)}
-function wireDrop(){
-  const dz=$('#drop'),fi=$('#file');
-  fi.onchange=()=>fi.files[0]&&handleFile(fi.files[0]);
-  ['dragover','dragenter'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('over')}));
-  ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('over')}));
-  dz.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)handleFile(f)});
+function setView(){const h=location.hash.slice(1);ui.view=V[h]?h:'ringkasan';ui.page=0;ui.q='';ui.dept='';ui.pay='';ui.confirm=false;ui.cd=false;ui.cx=null;ui.sel=new Set();closeAll();render();window.scrollTo(0,0)}
+function wireDrop(dz,fi,fn){
+  const z=$(dz),f=$(fi);if(!z||!f)return;
+  f.onchange=()=>f.files[0]&&fn(f.files[0]);
+  ['dragover','dragenter'].forEach(ev=>z.addEventListener(ev,e=>{e.preventDefault();z.classList.add('over')}));
+  ['dragleave','drop'].forEach(ev=>z.addEventListener(ev,e=>{e.preventDefault();z.classList.remove('over')}));
+  z.addEventListener('drop',e=>{const x=e.dataTransfer.files[0];if(x)fn(x)});
+}
+function restore(text){
+  try{const j=JSON.parse(text);if(!j||!Array.isArray(j.emps)||typeof j.att!=='object')throw 0;S=migrate(j);save();const l=latest();Object.assign(ui,{day:l,from:l.slice(0,7)+'-01',to:l});render();toast('Data dipulihkan')}
+  catch(e){toast('Isi cadangan tidak valid')}
+}
+function gsearch(v){
+  const box=$('#gsr');if(!v.trim()){box.hidden=true;return}
+  const q=v.toLowerCase(),rows=S.emps.filter(e=>(e.name+' '+e.id).toLowerCase().includes(q)).slice(0,8);
+  box.innerHTML=rows.map(e=>`<button data-act="gopen" data-id="${esc(e.id)}"><span><b>${esc(e.name)}</b> <span class="muted">${esc(e.id)}</span></span><span class="muted">${esc(e.dept)}${e.off?' · nonaktif':''}</span></button>`).join('')||'<div class="empty" style="padding:12px">Tidak ditemukan.</div>';
+  box.hidden=false;
 }
 
 /* ---------- events ---------- */
 const ACT={
+  go(a,e){e.preventDefault();const v=a.dataset.v,sub=a.dataset.sub;if(sub){if(v==='lembur')ui.splTab=sub;if(v==='pengaturan')ui.setTab=sub}if(location.hash==='#'+v)setView();else location.hash=v},
+  theme(){const r=document.documentElement,cur=r.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'),nx=cur==='dark'?'light':'dark';r.dataset.theme=nx;try{localStorage.setItem('absensi-theme',nx)}catch(e){}},
   prev(){ui.page--;refresh()},next(){ui.page++;refresh()},
-  open(a){ui.drawer=a.dataset.id;render()},closedrawer(){closeAll()},closemodal(){layer().innerHTML=''},
+  open(a){ui.drawer=a.dataset.id;render()},gopen(a){ui.drawer=a.dataset.id;$('#gsr').hidden=true;$('#gs').value='';render()},
+  closedrawer(){closeAll()},closemodal(){ui.editSpl=null;layer().innerHTML=''},
   ovclick(a,e){if(e.target===a){ui.drawer?closeAll():layer().innerHTML=''}},
   dayprev(){const d=pd(ui.day);d.setDate(d.getDate()-1);ui.day=dstr(d);render()},
   daynext(){const d=pd(ui.day);d.setDate(d.getDate()+1);ui.day=dstr(d);render()},
-  approve(a){const s=S.spl.find(x=>x.id===a.dataset.id);s.status='Disetujui';save();render();toast('SPL disetujui')},
-  reject(a){const s=S.spl.find(x=>x.id===a.dataset.id);s.status='Ditolak';save();render();toast('SPL ditolak')},
-  spltab(a){ui.splTab=a.dataset.id;render()},
+  editspl(a){newSplModal(a.dataset.id)},
+  cancelspl(a){const id=a.dataset.id;if(ui.cx!==id){ui.cx=id;refresh();return}ui.cx=null;S.spl.find(x=>x.id===id).status='Dibatalkan';save();render();toast('SPL dibatalkan')},
+  restorespl(a){S.spl.find(x=>x.id===a.dataset.id).status='Disetujui';save();render();toast('SPL diaktifkan lagi')},
+  
   newspl(){newSplModal()},savespl(){saveSpl()},viewspl(a){viewSpl(a.dataset.id)},
   copyspl(a){copyText(splText(S.spl.find(x=>x.id===a.dataset.id)),'Teks SPL tersalin')},
   pickall(){document.querySelectorAll('#picklist input').forEach(i=>{pick.sel.add(i.dataset.id);i.checked=true});$('#spl-count').textContent=pick.sel.size+' dipilih'},
   newemp(){newEmpModal()},
   saveemp(){const id=normId($('#ne-id').value),name=$('#ne-name').value.trim(),err=m=>$('#ne-err').textContent=m;
     if(!id||!name)return err('ID dan nama wajib diisi.');if(S.emps.some(e=>e.id===id))return err('ID sudah dipakai.');
-    S.emps.push({id,name,dept:$('#ne-dept').value.trim()||'Belum diatur',shift:$('#ne-shift').value,ot:$('#ne-ot').checked});save();layer().innerHTML='';render();toast('Karyawan ditambahkan')},
+    S.emps.push({id,name,dept:$('#ne-dept').value.trim()||'Belum diatur',pos:$('#ne-pos').value.trim(),sched:$('#ne-sched').value,shift:$('#ne-shift').value,pay:$('#ne-pay').value,rate:+$('#ne-rate').value||0,ot:$('#ne-ot').checked,off:false});
+    save();layer().innerHTML='';render();toast('Karyawan ditambahkan')},
   applyimp(){applyImport()},cancelimp(){ui.imp=null;$('#impbox').innerHTML=''},
-  copyrekap(){const rows=S.emps.filter(matchQ),h=['ID','Nama','Departemen','Hadir','Telat','Izin/Sakit/Cuti','Alpa','Tidak lengkap','Lembur (jam)','Estimasi lembur (Rp)'];
-    copyText([h.join('\t'),...rows.map(e=>{const o=recap(e,rangeDays());return [e.id,e.name,e.dept,o.hadir,o.telat,o.izin,o.alpa,o.inc,fmtH(o.otMin),Math.round(o.amt)].join('\t')})].join('\n'),'Tersalin, tempel di Excel')},
+  readpaste(){const t=$('#paste').value;if(!t.trim()){toast('Tempel data dulu');return}try{startIe(parseText(t),'Data tempelan')}catch(e){ui.ie={err:e.message}}$('#iebox').innerHTML=ieBox()},
+  applyie(){applyIe()},cancelie(){ui.ie=null;$('#iebox').innerHTML=''},
+  copytpl(){copyText(TEMPLATE,'Template tersalin, tempel di Excel')},
+  dltpl(){download('template-karyawan.csv',TEMPLATE.split('\n').map(l=>l.split('\t').join(',')).join('\n'),'text/csv')},
+  selall(a){const rows=kRows();if(a.checked)rows.forEach(e=>ui.sel.add(e.id));else rows.forEach(e=>ui.sel.delete(e.id));refresh()},
+  bk(a){const f=a.dataset.f,v=a.dataset.v;S.emps.forEach(e=>{if(!ui.sel.has(e.id))return;if(f==='ot')e.ot=v==='1';if(f==='sched')e.sched=v;if(f==='off')e.off=v==='1'});save();toast(ui.sel.size+' karyawan diubah');ui.sel=new Set();render()},
+  bkrate(){const v=+$('#bkrate').value;if(!(v>=0)||$('#bkrate').value===''){toast('Isi tarif dulu');return}S.emps.forEach(e=>{if(ui.sel.has(e.id))e.rate=v});save();toast(ui.sel.size+' karyawan diubah');ui.sel=new Set();render()},
+  bkclear(){ui.sel=new Set();refresh()},
+  delallmodal(){if(!S.emps.length){toast('Daftar karyawan sudah kosong');return}
+    modal(`<div class="tb" style="padding:0"><h1>Hapus semua karyawan</h1><button class="btn" data-act="closemodal">Tutup</button></div>
+    <p>Daftar <b>${S.emps.length} karyawan</b> akan dihapus. Data scan dan SPL tidak ikut terhapus: jika Anda mengimpor ulang dengan ID yang sama, absensi lama menempel kembali.</p>
+    <p class="sub">Karyawan yang sudah resign lebih baik dinonaktifkan, bukan dihapus. Penghapusan tidak bisa dibatalkan, jadi simpan cadangan dulu.</p>
+    <div class="tools"><button class="btn" data-act="copybackup">Salin cadangan</button><button class="btn" data-act="dlbackup">Unduh cadangan</button></div>
+    <label class="f">Ketik HAPUS untuk melanjutkan<input type="text" id="del-conf" data-bind="delconf" autocomplete="off"></label>
+    <div class="tools" style="justify-content:flex-end"><button class="btn" data-act="closemodal">Batal</button><button class="btn bad" id="del-go" data-act="delall" disabled>Hapus semua karyawan</button></div>`)},
+  delall(){if(($('#del-conf')||{}).value!=='HAPUS')return;const n=S.emps.length;S.emps=[];ui.sel=new Set();layer().innerHTML='';save();render();toast(`${n} karyawan dihapus. Absensi dan SPL tetap tersimpan.`)},
+  delselmodal(){const n=ui.sel.size;if(!n){toast('Pilih karyawan dulu');return}
+    modal(`<div class="tb" style="padding:0"><h1>Hapus ${n} karyawan?</h1><button class="btn" data-act="closemodal">Tutup</button></div>
+    <p>Data scan dan SPL mereka tetap tersimpan, tapi tidak tampil lagi di daftar dan rekap. Karyawan yang sudah resign lebih baik dinonaktifkan. Penghapusan tidak bisa dibatalkan.</p>
+    <div class="tools" style="justify-content:flex-end"><button class="btn" data-act="closemodal">Batal</button><button class="btn bad" data-act="delsel">Hapus ${n} karyawan</button></div>`)},
+  delsel(){const n=ui.sel.size;S.emps=S.emps.filter(e=>!ui.sel.has(e.id));ui.sel=new Set();layer().innerHTML='';save();render();toast(n+' karyawan dihapus')},
+  copyrekap(){const RD=rangeDays(),rows=S.emps.filter(matchQ).map(e=>({e,o:recap(e,RD)})).filter(({e,o})=>!e.off||o.hadir+o.izin+o.inc>0);
+    const h=['ID','Nama','Departemen','Jabatan','Kelompok gaji','Tarif/jam','Hadir','Telat','Izin/Sakit/Cuti','Alpa','Tanpa scan','Tidak lengkap','Lembur (jam)','Estimasi lembur (Rp)'];
+    copyText([`Periode\t${ui.from}\t${ui.to}`,h.join('\t'),...rows.map(({e,o})=>[e.id,e.name,e.dept,e.pos,e.pay,rateOf(e),o.hadir,o.telat,o.izin,o.alpa,o.noscan,o.inc,fmtH(o.otMin),Math.round(o.amt)].join('\t'))].join('\n'),'Tersalin, tempel di Excel')},
   addhol(){const v=$('#holin').value;if(v&&!S.set.holidays.includes(v)){S.set.holidays.push(v);save();render()}},
   delhol(a,e){e.preventDefault();S.set.holidays=S.set.holidays.filter(h=>h!==a.dataset.id);save();render()},
-  demo(){S=demo();save();Object.assign(ui,{month:latest().slice(0,7),day:latest(),from:latest().slice(0,7)+'-01',to:latest()});render();toast('Data contoh dimuat')},
-  wipe(){if(!ui.confirm){ui.confirm=true;render();return}S={demo:false,emps:[],att:{},spl:[],set:DEFAULT_SET(),imports:[]};ui.confirm=false;save();render();toast('Semua data dihapus')}
+  dlbackup(){download('cadangan-absensi-'+TODAY+'.json',JSON.stringify(S),'application/json')},
+  copybackup(){copyText(JSON.stringify(S),'Cadangan tersalin')},
+  restoretxt(){restore($('#restoretxt').value)},
+  demo(){if(S.emps.length&&!ui.cd){ui.cd=true;render();return}ui.cd=false;S=demo();save();const l=latest();Object.assign(ui,{day:l,from:l.slice(0,7)+'-01',to:l});render();toast('Data contoh dimuat')},
+  wipe(){if(!ui.confirm){ui.confirm=true;render();return}S=migrate({demo:false,emps:[],att:{},spl:[],set:DEFAULT_SET(),imports:[]});ui.confirm=false;save();render();toast('Semua data dihapus')}
 };
-document.addEventListener('click',e=>{const a=e.target.closest('[data-act]');if(!a)return;
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.search'))$('#gsr').hidden=true;
+  const a=e.target.closest('[data-act]');if(!a)return;
   if(e.target.closest('select,input,label.sw')&&a.dataset.act==='open')return;
+  if(a.dataset.act==='selall'&&a.tagName!=='INPUT')return;
   const f=ACT[a.dataset.act];if(f)f(a,e)});
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();$('#gs').focus()}});
 function onBind(e){
   const t=e.target,b=t.dataset.bind;if(!b)return;
-  const live=e.type==='input';
-  if(live&&!['q','splq'].includes(b))return;
-  if(!live&&['q','splq'].includes(b))return;
+  const live=e.type==='input',LIVE=['q','splq','gs','delconf'];
+  if(live&&!LIVE.includes(b))return;
+  if(!live&&LIVE.includes(b))return;
+  const em=()=>S.emps.find(x=>x.id===t.dataset.id);
   switch(b){
+    case 'gs':gsearch(t.value);break;
+    case 'delconf':$('#del-go').disabled=t.value.trim()!=='HAPUS';break;
     case 'q':ui.q=t.value;ui.page=0;refresh();break;
     case 'dept':ui.dept=t.value;ui.page=0;refresh();break;
+    case 'pay':ui.pay=t.value;ui.page=0;refresh();break;
+    case 'showoff':ui.showOff=t.checked;ui.page=0;refresh();break;
     case 'from':if(t.value){ui.from=t.value;if(ui.to<ui.from)ui.to=ui.from;ui.page=0;render()}break;
     case 'to':if(t.value){ui.to=t.value;if(ui.from>ui.to)ui.from=ui.to;ui.page=0;render()}break;
-    case 'preset':{const L=latest(),d=pd(L);let f,end=L;
-      if(t.value==='cur')f=L.slice(0,7)+'-01';
-      else if(t.value==='prev'){f=dstr(new Date(d.getFullYear(),d.getMonth()-1,1));end=dstr(new Date(d.getFullYear(),d.getMonth(),0))}
-      else if(t.value){const a=new Date(d);a.setDate(a.getDate()-(+t.value-1));f=dstr(a)}
+    case 'preset':{const v=t.value,t0=pd(TODAY),mon=new Date(t0);mon.setDate(mon.getDate()-((mon.getDay()+6)%7));let f,end;
+      if(v==='tw'){f=dstr(mon);end=TODAY}
+      else if(v==='lw'){const a=new Date(mon);a.setDate(a.getDate()-7);const z=new Date(a);z.setDate(z.getDate()+6);f=dstr(a);end=dstr(z)}
+      else if(v==='14'){const a=new Date(t0);a.setDate(a.getDate()-14);const z=new Date(t0);z.setDate(z.getDate()-1);f=dstr(a);end=dstr(z)}
+      else if(v==='cur'){f=TODAY.slice(0,7)+'-01';end=TODAY}
+      else if(v==='prev'){f=dstr(new Date(t0.getFullYear(),t0.getMonth()-1,1));end=dstr(new Date(t0.getFullYear(),t0.getMonth(),0))}
       if(f){ui.from=f;ui.to=end;ui.page=0;render()}break}
-    case 'month':ui.month=t.value;ui.page=0;render();break;
     case 'day':if(t.value){ui.day=t.value;render()}break;
-    case 'empot':{const em=S.emps.find(x=>x.id===t.dataset.id);em.ot=t.checked;save();$('#main').querySelector('.pager span').textContent=S.emps.length+' karyawan · '+S.emps.filter(x=>x.ot).length+' berhak lembur';break}
-    case 'empshift':S.emps.find(x=>x.id===t.dataset.id).shift=t.value;save();break;
+    case 'sel':t.checked?ui.sel.add(t.dataset.id):ui.sel.delete(t.dataset.id);refresh();break;
+    case 'emp':{const x=em(),f=t.dataset.f;if(!x)break;
+      if(f==='ot')x.ot=t.checked;else if(f==='on')x.off=!t.checked;else if(f==='rate')x.rate=Math.max(0,+t.value||0);else x[f]=t.value;
+      save();if(['sched','on'].includes(f)){const sc=document.querySelector('#main .scroll');const y=window.scrollY;refresh();window.scrollTo(0,y)}break}
+    case 'bkpay':if(t.value){S.emps.forEach(x=>{if(ui.sel.has(x.id))x.pay=t.value});save();toast(ui.sel.size+' karyawan diubah');ui.sel=new Set();render()}break;
+    case 'bkshift':if(t.value){S.emps.forEach(x=>{if(ui.sel.has(x.id)){x.shift=t.value;x.sched='tetap'}});save();toast(ui.sel.size+' karyawan diubah');ui.sel=new Set();render()}break;
     case 'shiftf':S.set.shifts[+t.dataset.i][t.dataset.k]=t.value;save();break;
+    case 'shiftrot':S.set.shifts[+t.dataset.i].rot=t.checked;save();break;
     case 'setn':S.set[t.dataset.k]=Math.max(0,+t.value||0);save();break;
     case 'sat':S.set.sat=t.checked;save();break;
     case 'map':ui.imp.map[t.dataset.k]=+t.value;analyze();$('#impbox').innerHTML=impBox();break;
-    case 'ov':{const em=S.emps.find(x=>x.id===ui.drawer),k=em.id+'|'+t.dataset.ds,r=S.att[k]||(S.att[k]={});
-      if(t.value===''||t.value==='__auto'){if(t.value==='__auto')delete r.ov}else r.ov=t.value;
+    case 'iemap':ui.ie.map[t.dataset.k]=+t.value;ieAnalyze();$('#iebox').innerHTML=ieBox();break;
+    case 'iemode':ui.ie.mode=t.value;ieAnalyze();$('#iebox').innerHTML=ieBox();break;
+    case 'ov':{const x=S.emps.find(y=>y.id===ui.drawer),k=x.id+'|'+t.dataset.ds,r=S.att[k]||(S.att[k]={});
+      if(t.value==='__auto')delete r.ov;else if(t.value)r.ov=t.value;
       if(!Object.keys(r).length)delete S.att[k];save();render();break}
+    case 'shov':{const x=S.emps.find(y=>y.id===ui.drawer),k=x.id+'|'+t.dataset.ds,r=S.att[k]||(S.att[k]={});
+      if(t.value==='__auto')delete r.shov;else if(t.value)r.shov=t.value;
+      save();render();break}
     case 'pick':t.checked?pick.sel.add(t.dataset.id):pick.sel.delete(t.dataset.id);$('#spl-count').textContent=pick.sel.size+' dipilih';break;
     case 'spldept':$('#picklist').innerHTML=pickList();break;
     case 'splq':pick.q=t.value;$('#picklist').innerHTML=pickList();break;
@@ -603,7 +874,8 @@ function onBind(e){
 }
 document.addEventListener('input',onBind);document.addEventListener('change',onBind);
 window.addEventListener('hashchange',setView);
+try{const th=localStorage.getItem('absensi-theme');if(th)document.documentElement.dataset.theme=th}catch(e){}
 setView();
 </script>
 
-</html>
+</body></html>
