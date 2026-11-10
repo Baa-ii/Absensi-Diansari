@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Impor Fingerprint · Absensi Karyawan</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div id="layer"></div>
+<div id="toast" class="toast" hidden></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="assets/data.js"></script>
+<script src="assets/layout.js"></script>
+<script>if(typeof boot==='undefined'||typeof S==='undefined'){document.body.innerHTML='<p style="padding:24px;font:16px system-ui,sans-serif">File aplikasi belum lengkap. Unggah folder assets (style.css, data.js, layout.js) bersama semua halaman ke GitHub.</p>'}</script>
+<script>
+const NEED={data:'1.0',layout:'1.0'};
+V.impor=()=>{
+  const last=(S.imports||[])[0];
+  return tb('Impor fingerprint','','Unggah file dari mesin fingerprint (.xlsx, .csv, .txt, .dat) berisi ID, tanggal dan jam scan.')+
+  `<label class="drop" id="drop" for="file"><b>Tarik file ke sini atau klik untuk memilih</b>Data di tanggal yang sama diperbarui, status manual tetap aman. Shift malam dan bergilir dikenali otomatis dari jam scan.</label>
+  <input type="file" id="file" accept=".xlsx,.xls,.csv,.txt,.dat" hidden>
+  <div id="impbox">${impBox()}</div>
+  ${last?`<section class="panel"><div class="ph"><h2>Impor terakhir</h2></div><div class="item"><div class="t"><b>${esc(last.file)}</b><span>${last.at} · ${last.rows} scan · ${last.days} hari-orang · ${last.newEmps} karyawan baru</span></div></div></section>`:''}`;
+};
+function impBox(){
+  const im=ui.imp;if(!im)return '';
+  if(im.err)return `<div class="panel pad" style="color:var(--bad)">${esc(im.err)}</div>`;
+  const r=im.res;
+  return `<section class="panel pad" style="display:flex;flex-direction:column;gap:16px">
+    <div><h2>Cocokkan kolom</h2><p class="sub">${esc(im.file)} · ${im.rows.length} baris. Sudah ditebak otomatis, ubah bila keliru.</p></div>
+    <div class="mapgrid">
+      <label class="f">ID / PIN<select data-bind="map" data-k="id">${colOpts(im,im.map.id)}</select></label>
+      <label class="f">Nama (opsional)<select data-bind="map" data-k="name">${colOpts(im,im.map.name,'Tidak ada')}</select></label>
+      <label class="f">Tanggal & waktu<select data-bind="map" data-k="dt">${colOpts(im,im.map.dt)}</select></label>
+      <label class="f">Jam terpisah (opsional)<select data-bind="map" data-k="tm">${colOpts(im,im.map.tm,'Tidak ada')}</select></label></div>
+    ${r?`<div class="stats"><div class="stat"><b>${r.valid}</b><span>Scan terbaca</span></div><div class="stat ${r.bad?'w':''}"><b>${r.bad}</b><span>Baris dilewati</span></div><div class="stat"><b>${r.ids.size}</b><span>Karyawan</span></div><div class="stat ${r.unknown?'w':''}"><b>${r.unknown}</b><span>ID belum terdaftar</span></div><div class="stat"><b>${r.groups.size}</b><span>Hari-orang</span></div></div>
+    <p class="sub">Periode ${r.min?fmtDate(r.min)+' sampai '+fmtDate(r.max):'—'}. Masuk = scan pertama, pulang = scan terakhir; scan tunggal ditandai "Tidak lengkap". Untuk karyawan shift malam dan bergilir, scan dikelompokkan per giliran kerja dan shift ditentukan dari jam masuk.${r.unknown?' ID yang belum terdaftar ditambahkan sebagai karyawan baru dengan jadwal tetap Kantor. Sebaiknya impor daftar karyawan dulu.':''}</p>
+    <div class="tools"><button class="btn primary" data-act="applyimp" ${r.valid?'':'disabled'}>Terapkan ke absensi</button><button class="btn" data-act="cancelimp">Batal</button></div>`:''}
+  </section>`;
+}
+const DT=/\d{4}[-\/]\d{1,2}[-\/]\d{1,2}|\d{1,2}[-\/.]\d{1,2}[-\/.]\d{2,4}/,TM=/\d{1,2}:\d{2}/;
+function parseDT(s){
+  s=String(s).trim();let m=s.match(/(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/),y,mo,d;
+  if(m){y=+m[1];mo=+m[2];d=+m[3]}else{m=s.match(/(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})/);if(!m)return null;d=+m[1];mo=+m[2];y=+m[3];if(y<100)y+=2000}
+  const t=s.match(/(\d{1,2}):(\d{2})/);if(!t||mo<1||mo>12||d<1||d>31)return null;
+  return {date:`${y}-${pad(mo)}-${pad(d)}`,time:pad(+t[1])+':'+t[2]};
+}
+function guess(rows){
+  const first=rows[0]||[],hasHead=first.some(c=>/[a-zA-Z]{3,}/.test(c))&&!first.some(c=>DT.test(c));
+  const head=hasHead?first.map(String):null,data=hasHead?rows.slice(1):rows,smp=data.slice(0,30),n=Math.max(...rows.slice(0,30).map(r=>r.length),1);
+  const frac=(i,fn)=>smp.length?smp.filter(r=>fn(String(r[i]??''))).length/smp.length:0;
+  const map={id:-1,name:-1,dt:-1,tm:-1};
+  for(let i=0;i<n;i++){const h=head?String(head[i]).toLowerCase():'';
+    if(map.id<0&&/pin|\bid\b|badge|nik|no\.?\s*id|userid/.test(h))map.id=i;
+    if(map.name<0&&/nama|name/.test(h))map.name=i;}
+  for(let i=0;i<n;i++){if(frac(i,s=>DT.test(s)&&TM.test(s))>.6){map.dt=i;break}}
+  if(map.dt<0){for(let i=0;i<n;i++)if(frac(i,s=>DT.test(s))>.6){map.dt=i;break}
+    for(let i=0;i<n;i++)if(i!==map.dt&&frac(i,s=>TM.test(s)&&!DT.test(s))>.6){map.tm=i;break}}
+  if(map.id<0){for(let i=0;i<n;i++)if(i!==map.dt&&i!==map.tm&&frac(i,s=>/^\d+$/.test(s))>.6){map.id=i;break}}
+  if(map.id<0)map.id=0;if(map.dt<0)map.dt=Math.min(1,n-1);
+  return {head,data,map,ncol:n};
+}
+function analyze(){
+  const im=ui.imp,m=im.map,per={},names={};let valid=0,bad=0;
+  im.data.forEach(r=>{
+    const id=normId(r[m.id]??'');let s=String(r[m.dt]??'');if(m.tm>=0)s+=' '+(r[m.tm]??'');
+    const p=parseDT(s);if(!id||!p){bad++;return}
+    valid++;if(m.name>=0&&r[m.name])names[id]=String(r[m.name]).trim();
+    (per[id]=per[id]||[]).push(dayNum(p.date)*1440+toMin(p.time));
+  });
+  const EM=EMap(),groups=new Map(),ids=new Set(Object.keys(per));
+  const add=(id,dn,a,b,n)=>{const k=id+'|'+numDate(dn),g=groups.get(k);if(!g)groups.set(k,{a,b,n});else{g.a=Math.min(g.a,a);g.b=Math.max(g.b,b);g.n+=n}};
+  ids.forEach(id=>{
+    const arr=per[id].sort((x,y)=>x-y),e=EM.get(id),sess=e&&(e.sched==='bergilir'||isNight(shiftOf(e)));
+    if(!sess){arr.forEach(v=>{const dn=Math.floor(v/1440),t=v-dn*1440;add(id,dn,t,t,1)});return}
+    let start=arr[0],prev=arr[0],cnt=1;
+    const flush=()=>{const dn=Math.floor(start/1440);add(id,dn,start-dn*1440,prev-dn*1440,cnt)};
+    for(let i=1;i<arr.length;i++){if(arr[i]-prev>600){flush();start=arr[i];cnt=0}prev=arr[i];cnt++}
+    flush();
+  });
+  let min='',max='';groups.forEach((g,k)=>{const d=k.split('|')[1];if(!min||d<min)min=d;if(!max||d>max)max=d});
+  im.res={valid,bad,ids,groups,names,min,max,unknown:[...ids].filter(i=>!EM.has(i)).length};
+}
+async function handleFile(f){
+  try{
+    const rows=await readRows(f);if(!rows.length)throw new Error('File kosong.');
+    const g=guess(rows);ui.imp={file:f.name,rows,head:g.head,data:g.data,map:g.map,ncol:g.ncol};analyze();
+  }catch(e){ui.imp={err:e.message||'File tidak bisa dibaca.'}}
+  $('#impbox').innerHTML=impBox();
+}
+function applyImport(){
+  const r=ui.imp.res;let newE=0;
+  r.ids.forEach(id=>{if(!S.emps.find(e=>e.id===id)){S.emps.push({id,name:r.names[id]||'Karyawan '+id,dept:'Belum diatur',pos:'',sched:'tetap',shift:S.set.shifts[0].id,pay:'Bulanan',rate:0,ot:false,off:false});newE++}});
+  const EM=EMap();
+  r.groups.forEach((g,k)=>{
+    const id=k.split('|')[0],e=EM.get(id),old=S.att[k]||{},rec={...old,in:fromMin(g.a%1440),out:fromMin(g.b%1440),n:g.n};
+    if(g.b>=1440)rec.nd=1;else delete rec.nd;
+    if(e&&e.sched==='bergilir'){const det=detectShift(g.a%1440);rec.sh=det.id;rec.un=det.dist>120?1:0}else{delete rec.sh;delete rec.un}
+    S.att[k]=rec;
+  });
+  (S.imports=S.imports||[]).unshift({file:ui.imp.file,at:new Date().toLocaleString('id-ID'),rows:r.valid,days:r.groups.size,newEmps:newE});
+  ui.day=r.max;ui.from=r.max.slice(0,7)+'-01';ui.to=r.max;S.emps.sort((a,b)=>a.id.localeCompare(b.id,undefined,{numeric:true}));
+  save();ui.imp=null;render();toast(`Impor selesai: ${r.groups.size} hari-orang`);
+}
+ACT.applyimp=()=>applyImport();
+ACT.cancelimp=()=>{ui.imp=null;$('#impbox').innerHTML=''};
+BIND.map=t=>{ui.imp.map[t.dataset.k]=+t.value;analyze();$('#impbox').innerHTML=impBox()};
+boot({view:'impor',need:NEED,after:()=>wireDrop('#drop','#file',handleFile)});
+
+</script>
+</body>
+</html>

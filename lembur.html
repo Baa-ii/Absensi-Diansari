@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Lembur dan SPL · Absensi Karyawan</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div id="layer"></div>
+<div id="toast" class="toast" hidden></div>
+<script src="assets/data.js"></script>
+<script src="assets/layout.js"></script>
+<script>if(typeof boot==='undefined'||typeof S==='undefined'){document.body.innerHTML='<p style="padding:24px;font:16px system-ui,sans-serif">File aplikasi belum lengkap. Unggah folder assets (style.css, data.js, layout.js) bersama semua halaman ke GitHub.</p>'}</script>
+<script>
+const NEED={data:'1.0',layout:'1.0'};
+V.lembur=()=>{
+  const tab=ui.splTab,title={'Semua':'Semua SPL','Dibatalkan':'SPL dibatalkan','Tanpa SPL':'Lembur tanpa SPL'}[tab]||'Semua SPL';
+  const right=(tab==='Tanpa SPL'?rangeCtl():'')+`<button class="btn primary" data-act="newspl">Buat SPL</button>`;
+  return tb(title,right,tab==='Tanpa SPL'?'Karyawan yang pulang melewati jam shift tanpa SPL disetujui. Jam ini tidak dibayar.':'SPL yang dibuat langsung berlaku. Lembur dibayar untuk karyawan berhak, sebesar yang lebih kecil antara jam SPL dan jam nyata.')+`<section class="panel"><div id="list">${LST.lembur()}</div></section>`;
+};
+LST.lembur=()=>{
+  if(ui.splTab==='Tanpa SPL'){
+    const rows=[],RD=rangeDays();actE().forEach(e=>RD.forEach(ds=>{const i=dayInfo(e,ds);if(i.flag)rows.push({e,ds,i})}));
+    rows.sort((a,b)=>a.ds<b.ds?-1:a.ds>b.ds?1:0);
+    return `<div class="scroll"><table><thead><tr><th>Tanggal</th><th>Karyawan</th><th>Pulang</th><th class="n">Lembur nyata</th><th>Keterangan</th></tr></thead><tbody>${rows.slice(0,200).map(({e,ds,i})=>`<tr><td>${fmtDate(ds)}</td><td><b>${esc(e.name)}</b><br><span class="muted">${esc(e.dept)}</span></td><td class="n">${i.r.out}${i.r.nd?' +1':''}</td><td class="n">${fmtH(i.ot)} jam</td><td><span class="pill ${i.flag==='Tanpa SPL'?'warn':'bad'}">${i.flag}</span></td></tr>`).join('')||'<tr><td colspan="5" class="empty">Tidak ada lembur di luar SPL pada rentang ini.</td></tr>'}</tbody></table></div>${rows.length>200?`<div class="pager"><span>Menampilkan 200 dari ${rows.length}</span></div>`:''}`;
+  }
+  const EM=EMap(),rows=S.spl.filter(s=>ui.splTab==='Semua'||s.status===ui.splTab).sort((a,b)=>a.date<b.date?1:-1);
+  return `<div class="scroll"><table><thead><tr><th>Nomor</th><th>Tanggal shift</th><th>Jam</th><th>Departemen</th><th class="n">Orang</th><th class="n">Biaya maks.</th><th>Pekerjaan</th><th>Status</th><th></th></tr></thead><tbody>
+  ${rows.map(s=>`<tr><td class="mono">${esc(s.id)}${s.ed?` <span class="pill" title="Diubah ${esc(s.ed)}">diubah</span>`:''}</td><td>${fmtDate(s.date)}</td><td class="n">${s.start}–${s.end}</td><td>${esc(s.dept||'—')}</td><td class="n">${s.emps.length}</td><td class="n">${rp(splCost(s,EM))}</td><td>${esc(s.reason)}${s.note?`<br><span class="muted">${esc(s.note)}</span>`:''}</td>
+    <td><span class="pill ${s.status==='Disetujui'?'good':s.status==='Dibatalkan'?'bad':'warn'}">${s.status}</span></td>
+    <td><span class="tools" style="flex-wrap:nowrap">${s.status==='Disetujui'?`<button class="btn sm" data-act="editspl" data-id="${esc(s.id)}">Edit</button><button class="btn sm bad" data-act="cancelspl" data-id="${esc(s.id)}">${ui.cx===s.id?'Yakin batalkan?':'Batalkan'}</button>`:`<button class="btn sm" data-act="restorespl" data-id="${esc(s.id)}">Aktifkan lagi</button>`}<button class="btn sm" data-act="viewspl" data-id="${esc(s.id)}">Lihat</button></span></td></tr>`).join('')||'<tr><td colspan="9" class="empty">Belum ada SPL di bagian ini.</td></tr>'}</tbody></table></div>`;
+};
+let pick={sel:new Set(),q:''};
+function pickList(){
+  const dp=($('#spl-dept')||{}).value||'';
+  const rows=S.emps.filter(e=>((e.ot&&!e.off)||pick.sel.has(e.id))&&(!dp||e.dept===dp)&&(!pick.q||(e.name+e.id).toLowerCase().includes(pick.q.toLowerCase()))).slice(0,80);
+  return rows.map(e=>`<label><input type="checkbox" data-bind="pick" data-id="${esc(e.id)}" ${pick.sel.has(e.id)?'checked':''}><span><b>${esc(e.name)}</b> <span class="muted">${esc(e.id)} · ${esc(e.dept)}${e.pos?' · '+esc(e.pos):''}</span></span></label>`).join('')||'<div class="empty">Tidak ada karyawan berhak lembur yang cocok.</div>';
+}
+function newSplModal(id){
+  const ed=id?S.spl.find(x=>x.id===id):null;ui.editSpl=ed?ed.id:null;
+  pick={sel:new Set(ed?ed.emps:[]),q:''};
+  const elig=[...new Set(S.emps.filter(e=>(e.ot&&!e.off)||pick.sel.has(e.id)).map(e=>e.dept))].sort();
+  modal(`<div class="tb" style="padding:0"><h1>${ed?'Edit SPL':'Buat SPL'}</h1><button class="btn" data-act="closemodal">Tutup</button></div>
+  <div class="form"><label class="f">Tanggal shift dimulai<input type="date" id="spl-date" value="${ed?ed.date:TODAY}"></label><label class="f">Mulai<input type="time" id="spl-start" value="${ed?ed.start:'17:00'}"></label><label class="f">Selesai<input type="time" id="spl-end" value="${ed?ed.end:'20:00'}"></label></div>
+  <p class="sub" style="margin-top:-8px">Untuk lembur yang melewati tengah malam, isi jam selesai hari berikutnya dan tanggal shift dimulai.</p>
+  <label class="f">Pekerjaan / alasan<textarea id="spl-reason" rows="2" placeholder="Contoh: mengejar target produksi">${ed?esc(ed.reason):''}</textarea></label>
+  <label class="f">Keterangan / disetujui oleh (opsional)<input type="text" id="spl-note" value="${ed?esc(ed.note||''):''}" placeholder="Contoh: disetujui Kepala Produksi, SPL kertas no. 123"></label>
+  <div><div class="tools" style="margin-bottom:8px"><strong>Karyawan</strong><span class="muted" id="spl-count">${pick.sel.size} dipilih</span><select id="spl-dept" data-bind="spldept"><option value="">Semua departemen</option>${elig.map(d=>`<option>${esc(d)}</option>`).join('')}</select><input type="text" id="spl-q" data-bind="splq" placeholder="Cari"><button class="btn sm" data-act="pickall">Pilih semua yang tampil</button></div>
+  <div class="pick" id="picklist">${pickList()}</div><p class="sub">Hanya karyawan aktif yang berhak lembur yang muncul.</p></div>
+  <div id="spl-err" style="color:var(--bad)"></div>
+  <div class="tools" style="justify-content:flex-end"><button class="btn" data-act="closemodal">Batal</button><button class="btn primary" data-act="savespl">${ed?'Simpan perubahan':'Simpan SPL'}</button></div>`);
+}
+function saveSpl(){
+  const date=$('#spl-date').value,st=$('#spl-start').value,en=$('#spl-end').value,reason=$('#spl-reason').value.trim(),err=m=>$('#spl-err').textContent=m;
+  if(!date||!st||!en)return err('Isi tanggal dan jam.');
+  if(en===st)return err('Jam selesai tidak boleh sama dengan jam mulai.');
+  if(!reason)return err('Isi pekerjaan atau alasan lembur.');
+  if(!pick.sel.size)return err('Pilih minimal satu karyawan.');
+  const ids=[...pick.sel],EM=EMap(),dset=new Set(ids.map(id=>(EM.get(id)||{dept:'-'}).dept)),mo=date.slice(0,7);
+  if(ui.editSpl){const s=S.spl.find(x=>x.id===ui.editSpl);Object.assign(s,{date,start:st,end:en,reason,dept:dset.size===1?[...dset][0]:'Beberapa departemen',emps:ids,note:$('#spl-note').value.trim(),ed:new Date().toLocaleString('id-ID')});ui.editSpl=null;save();closeAll();render();toast('SPL diperbarui');return}
+  const n=S.spl.filter(s=>s.date.slice(0,7)===mo).length+1;
+  S.spl.push({id:`SPL/${mo.slice(0,4)}/${mo.slice(5)}/${String(n).padStart(3,'0')}`,date,start:st,end:en,reason,dept:dset.size===1?[...dset][0]:'Beberapa departemen',emps:ids,note:$('#spl-note').value.trim(),at:new Date().toLocaleString('id-ID'),status:'Disetujui'});
+  save();closeAll();ui.splTab='Semua';render();toast('SPL disimpan');
+}
+const SUBS={'semua':'Semua','dibatalkan':'Dibatalkan','tanpa-spl':'Tanpa SPL'};
+function subKey(){const h=location.hash.slice(1);ui.splTab=SUBS[h]||'Semua';return SUBS[h]?h:'semua'}
+Object.assign(ACT,{
+  editspl(a){newSplModal(a.dataset.id)},
+  cancelspl(a){const id=a.dataset.id;if(ui.cx!==id){ui.cx=id;refresh();return}ui.cx=null;S.spl.find(x=>x.id===id).status='Dibatalkan';save();render();toast('SPL dibatalkan')},
+  restorespl(a){S.spl.find(x=>x.id===a.dataset.id).status='Disetujui';save();render();toast('SPL diaktifkan lagi')},
+  newspl(){newSplModal()},savespl(){saveSpl()},
+  pickall(){document.querySelectorAll('#picklist input').forEach(i=>{pick.sel.add(i.dataset.id);i.checked=true});$('#spl-count').textContent=pick.sel.size+' dipilih'}
+});
+Object.assign(BIND,{
+  pick(t){t.checked?pick.sel.add(t.dataset.id):pick.sel.delete(t.dataset.id);$('#spl-count').textContent=pick.sel.size+' dipilih'},
+  spldept(){$('#picklist').innerHTML=pickList()},
+  splq(t){pick.q=t.value;$('#picklist').innerHTML=pickList()}
+});
+window.addEventListener('hashchange',()=>{ui.page=0;ui.cx=null;render()});
+boot({view:'lembur',getSub:subKey,need:NEED});
+
+</script>
+</body>
+</html>

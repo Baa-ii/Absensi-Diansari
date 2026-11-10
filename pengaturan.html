@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Pengaturan · Absensi Karyawan</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div id="layer"></div>
+<div id="toast" class="toast" hidden></div>
+<script src="assets/data.js"></script>
+<script src="assets/layout.js"></script>
+<script>if(typeof boot==='undefined'||typeof S==='undefined'){document.body.innerHTML='<p style="padding:24px;font:16px system-ui,sans-serif">File aplikasi belum lengkap. Unggah folder assets (style.css, data.js, layout.js) bersama semua halaman ke GitHub.</p>'}</script>
+<script>
+const NEED={data:'1.0',layout:'1.0'};
+V.pengaturan=()=>{
+  const t=ui.setTab,head={jam:'Jam kerja',aturan:'Aturan & tarif',libur:'Hari libur',data:'Data & cadangan'}[t];
+  let body='';
+  if(t==='jam')body=`<section class="panel pad" style="display:flex;flex-direction:column;gap:16px">
+    ${S.set.shifts.map((s,i)=>`<div class="form"><label class="f">Nama shift<input type="text" data-bind="shiftf" data-i="${i}" data-k="name" value="${esc(s.name)}"></label><label class="f">Masuk<input type="time" data-bind="shiftf" data-i="${i}" data-k="start" value="${s.start}"></label><label class="f">Pulang<input type="time" data-bind="shiftf" data-i="${i}" data-k="end" value="${s.end}"></label>
+      <label class="f">Dipakai karyawan bergilir<span style="height:34px;display:flex;align-items:center"><span class="sw"><input type="checkbox" data-bind="shiftrot" data-i="${i}" ${s.rot?'checked':''} aria-label="Dipakai karyawan bergilir"><i></i></span></span></label></div>`).join('')}
+    <p class="sub">Jika jam pulang lebih awal dari jam masuk (misalnya 23:00–07:00), shift dianggap melewati tengah malam dan dicatat pada tanggal masuk. Shift yang ditandai "dipakai karyawan bergilir" menjadi pilihan saat aplikasi menebak shift dari jam scan masuk.</p></section>`;
+  if(t==='aturan')body=`<section class="panel pad" style="display:flex;flex-direction:column;gap:16px">
+    <div class="form"><label class="f">Toleransi terlambat (menit)<input type="number" min="0" data-bind="setn" data-k="tol" value="${S.set.tol}"></label><label class="f">Lembur minimal (menit)<input type="number" min="0" step="5" data-bind="setn" data-k="minOT" value="${S.set.minOT}"></label><label class="f">Tarif lembur umum per jam (Rp)<input type="number" min="0" step="500" data-bind="setn" data-k="rate" value="${S.set.rate||0}"></label></div>
+    <label style="display:flex;gap:10px;align-items:center;font-weight:600"><span class="sw"><input type="checkbox" data-bind="sat" ${S.set.sat?'checked':''}><i></i></span>Sabtu termasuk hari kerja kantor</label>
+    <p class="sub">Nominal lembur = jam lembur dibayar × tarif per jam, tanpa pengali. Tarif di data karyawan (jika diisi) menggantikan tarif umum. Jam dibayar dibulatkan ke bawah per 30 menit. Angka ini estimasi untuk dicek bagian penggajian.</p>
+    <p class="sub">Karyawan bergilir dianggap bekerja sesuai shift yang terdeteksi, termasuk Sabtu dan Minggu. Hari tanpa scan mereka ditampilkan sebagai "Tanpa scan", bukan Alpa, karena jadwal libur mereka belum diketahui.</p></section>`;
+  if(t==='libur')body=`<section class="panel pad" style="display:flex;flex-direction:column;gap:12px"><div class="tools"><input type="date" id="holin"><button class="btn" data-act="addhol">Tambah</button></div>
+    <div class="tools">${S.set.holidays.slice().sort().map(h=>`<span class="pill info">${fmtDate(h)} <a href="#pengaturan" data-act="delhol" data-id="${h}" aria-label="Hapus" style="text-decoration:none;margin-left:4px">×</a></span>`).join('')||'<span class="muted">Belum ada.</span>'}</div><p class="sub">Berlaku untuk karyawan berjadwal tetap.</p></section>`;
+  if(t==='data')body=`<section class="panel pad" style="display:flex;flex-direction:column;gap:14px"><h2>Cadangan</h2>
+    <div class="tools"><button class="btn" data-act="dlbackup">Unduh cadangan</button><button class="btn" data-act="copybackup">Salin cadangan</button><label class="btn" for="restore">Pulihkan dari file</label><input type="file" id="restore" accept=".json,.txt" hidden></div>
+    <p class="sub">Data tersimpan di browser ini saja. Simpan cadangan secara berkala, terutama sebelum membersihkan browser atau pindah komputer. Jika unduhan tidak berjalan, gunakan Salin cadangan lalu tempel ke file teks.</p>
+    <textarea id="restoretxt" rows="3" placeholder="Atau tempel isi cadangan di sini"></textarea><div><button class="btn" data-act="restoretxt">Pulihkan dari teks</button></div></section>
+    <section class="panel pad" style="display:flex;flex-direction:column;gap:12px"><h2>Data contoh</h2><div class="tools">${(S.demo||!S.emps.length)?`<button class="btn" data-act="demo">${ui.cd?'Klik lagi untuk mengganti dengan data contoh baru':'Muat data contoh (224 karyawan)'}</button>`:''}<button class="btn bad" data-act="wipe">${ui.confirm?'Klik lagi untuk menghapus semua':'Hapus semua data'}</button></div>${(S.demo||!S.emps.length)?'':'<p class="sub">Tombol data contoh disembunyikan karena sudah ada data asli. Pilih Hapus semua data bila ingin memakainya lagi.</p>'}</section>`;
+  return tb(head)+body;
+};
+function restore(text){
+  try{const j=JSON.parse(text);if(!j||!Array.isArray(j.emps)||typeof j.att!=='object')throw 0;S=migrate(j);save();const l=latest();Object.assign(ui,{day:l,from:l.slice(0,7)+'-01',to:l});render();toast('Data dipulihkan')}
+  catch(e){toast('Isi cadangan tidak valid')}
+}
+Object.assign(ACT,{
+  addhol(){const v=$('#holin').value;if(v&&!S.set.holidays.includes(v)){S.set.holidays.push(v);save();render()}},
+  delhol(a,e){e.preventDefault();S.set.holidays=S.set.holidays.filter(h=>h!==a.dataset.id);save();render()},
+  restoretxt(){restore($('#restoretxt').value)},
+  demo(){if(S.emps.length&&!ui.cd){ui.cd=true;render();return}ui.cd=false;S=demo();save();const l=latest();Object.assign(ui,{day:l,from:l.slice(0,7)+'-01',to:l});render();toast('Data contoh dimuat')},
+  wipe(){if(!ui.confirm){ui.confirm=true;render();return}S=migrate({demo:false,emps:[],att:{},spl:[],set:DEFAULT_SET(),imports:[]});ui.confirm=false;save();render();toast('Semua data dihapus')}
+});
+Object.assign(BIND,{
+  shiftf(t){S.set.shifts[+t.dataset.i][t.dataset.k]=t.value;save()},
+  shiftrot(t){S.set.shifts[+t.dataset.i].rot=t.checked;save()},
+  setn(t){S.set[t.dataset.k]=Math.max(0,+t.value||0);save()},
+  sat(t){S.set.sat=t.checked;save()}
+});
+function subKey(){const h=location.hash.slice(1);ui.setTab=['jam','aturan','libur','data'].includes(h)?h:'jam';return ui.setTab}
+window.addEventListener('hashchange',()=>{ui.confirm=false;ui.cd=false;render()});
+boot({view:'pengaturan',getSub:subKey,need:NEED,after:()=>{const rf=$('#restore');if(rf)rf.onchange=async()=>{if(rf.files[0])restore(await rf.files[0].text())}}});
+
+</script>
+</body>
+</html>

@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Impor Karyawan · Absensi Karyawan</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div id="layer"></div>
+<div id="toast" class="toast" hidden></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="assets/data.js"></script>
+<script src="assets/layout.js"></script>
+<script>if(typeof boot==='undefined'||typeof S==='undefined'){document.body.innerHTML='<p style="padding:24px;font:16px system-ui,sans-serif">File aplikasi belum lengkap. Unggah folder assets (style.css, data.js, layout.js) bersama semua halaman ke GitHub.</p>'}</script>
+<script>
+const NEED={data:'1.0',layout:'1.0'};
+const EF=[['id','ID / PIN fingerprint',/pin|\bid\b|nik|badge|no\.?\s*id/i],['name','Nama',/nama|name/i],['dept','Departemen',/dept|departemen|bagian|divisi/i],['pos','Jabatan',/jabatan|posisi|position/i],['sched','Jenis jadwal',/jadwal|schedule/i],['shift','Shift tetap',/shift/i],['pay','Kelompok gaji',/gaji|kelompok|periode|payroll/i],['rate','Tarif lembur',/tarif|rate/i],['ot','Boleh lembur',/lembur|overtime|\bot\b/i],['off','Status',/status|aktif/i]];
+const TEMPLATE='ID/PIN\tNama\tDepartemen\tJabatan\tJenis jadwal\tShift tetap\tKelompok gaji\tTarif lembur\tBoleh lembur\tStatus\n1001\tContoh Satu\tProduksi\tOperator\tBergilir\t\tMingguan\t\tYa\tAktif\n2001\tContoh Dua\tAdmin\tStaf\tTetap\tKantor\tBulanan\t\tTidak\tAktif';
+V['impor-karyawan']=()=>tb('Impor karyawan','<button class="btn" data-act="copytpl">Salin template</button><button class="btn" data-act="dltpl">Unduh template</button>','Unggah daftar karyawan dari Excel atau CSV, atau tempel langsung dari Excel. ID harus sama dengan PIN di mesin fingerprint.')+
+  `<label class="drop" id="drop2" for="file2"><b>Tarik file daftar karyawan ke sini atau klik untuk memilih</b>.xlsx, .csv atau .txt dengan baris judul di baris pertama</label>
+  <input type="file" id="file2" accept=".xlsx,.xls,.csv,.txt" hidden>
+  <section class="panel pad" style="display:flex;flex-direction:column;gap:10px"><h2>Atau tempel dari Excel</h2><textarea id="paste" rows="4" placeholder="Salin sel-sel di Excel (termasuk baris judul) lalu tempel di sini"></textarea><div><button class="btn" data-act="readpaste">Baca data tempelan</button></div></section>
+  <div id="iebox">${ieBox()}</div>`;
+function ieGuess(rows){
+  const first=rows[0]||[],hasHead=first.some(c=>/[a-zA-Z]{2,}/.test(c)&&EF.some(f=>f[2].test(c)));
+  const n=Math.max(...rows.slice(0,30).map(r=>r.length),1),map={},used=new Set();
+  EF.forEach(([k,,re],idx)=>{map[k]=-1;if(hasHead)for(let i=0;i<n;i++)if(!used.has(i)&&re.test(String(first[i]))){map[k]=i;used.add(i);break}});
+  if(!hasHead)EF.forEach(([k],i)=>{map[k]=i<n?i:-1});
+  return {head:hasHead?first.map(String):null,data:hasHead?rows.slice(1):rows,map,ncol:n};
+}
+const nrm=s=>String(s||'').trim().toLowerCase();
+function ieAnalyze(){
+  const ie=ui.ie,m=ie.map,seen=new Set(),EM=S.demo?new Map():EMap(),items=[],counts={baru:0,update:0,sama:0,error:0,skip:0},ids=new Set();
+  ie.data.forEach((r,idx)=>{
+    const g=k=>m[k]>=0?String(r[m[k]]??'').trim():'';
+    if(r.every(c=>!String(c).trim()))return;
+    const id=normId(g('id')),name=g('name'),rec={},iss=[];
+    let st='ok';
+    if(!id){st='error';iss.push('ID kosong')}
+    else if(seen.has(id)){st='error';iss.push('ID kembar di file')}
+    if(id)seen.add(id);
+    const ex=id?EM.get(id):null;
+    if(!ex&&!name&&st!=='error'){st='error';iss.push('Nama kosong untuk karyawan baru')}
+    if(name)rec.name=name;
+    if(g('dept'))rec.dept=g('dept');
+    if(g('pos'))rec.pos=g('pos');
+    const sc=nrm(g('sched'));if(sc){if(/gilir|rotasi|shift/.test(sc))rec.sched='bergilir';else if(/tetap|kantor|normal/.test(sc))rec.sched='tetap';else iss.push('Jenis jadwal tidak dikenal ("'+g('sched')+'")')}
+    const sf=nrm(g('shift'));if(sf){const sh=S.set.shifts.find(x=>nrm(x.name)===sf||x.id===sf||sf.includes(x.start));if(sh)rec.shift=sh.id;else iss.push('Shift tidak dikenal ("'+g('shift')+'")')}
+    const py=nrm(g('pay'));if(py){if(/2|dua|bi/.test(py))rec.pay='2 mingguan';else if(/minggu/.test(py))rec.pay='Mingguan';else if(/bulan/.test(py))rec.pay='Bulanan';else iss.push('Kelompok gaji tidak dikenal ("'+g('pay')+'")')}
+    const rt=g('rate').replace(/[^\d]/g,'');if(rt)rec.rate=+rt;
+    const ot=nrm(g('ot'));if(ot){if(/^(ya|y|yes|1|true|boleh|ok)$/.test(ot))rec.ot=true;else if(/^(tidak|t|no|n|0|false|tdk)$/.test(ot))rec.ot=false;else iss.push('Boleh lembur tidak dikenal ("'+g('ot')+'")')}
+    const of=nrm(g('off'));if(of){if(/non|tidak|resign|keluar|berhenti|^0$|^no$|^false$/.test(of))rec.off=true;else rec.off=false}
+    if(st!=='error'){
+      if(!ex)st='baru';
+      else if(ie.mode==='new')st='skip';
+      else st=Object.keys(rec).some(k=>ex[k]!==rec[k])?'update':'sama';
+    }
+    counts[st==='ok'?'sama':st]++;
+    if(id&&st!=='error')ids.add(id);
+    items.push({row:idx+2,id,name,rec,st,iss});
+  });
+  const gone=ie.mode==='sync'&&!S.demo?S.emps.filter(e=>!ids.has(e.id)&&!e.off).length:0;
+  ie.res={items,counts,gone,probs:items.filter(i=>i.st==='error'||i.iss.length)};
+}
+function ieBox(){
+  const ie=ui.ie;if(!ie)return '';
+  if(ie.err)return `<div class="panel pad" style="color:var(--bad)">${esc(ie.err)}</div>`;
+  const r=ie.res,c=r.counts;
+  const colSel=([k,l])=>`<label class="f">${l}<select data-bind="iemap" data-k="${k}">${colOpts(ie,ie.map[k],'Tidak ada')}</select></label>`;
+  return `<section class="panel pad" style="display:flex;flex-direction:column;gap:16px">
+    <div><h2>Cocokkan kolom</h2><p class="sub">${esc(ie.file)} · ${ie.data.length} baris data. Kolom yang tidak ada akan diabaikan; data lama untuk kolom itu tidak diubah.</p></div>
+    <div class="mapgrid">${EF.map(colSel).join('')}</div>
+    <div class="tools"><strong>Mode:</strong>
+      <label class="tools" style="gap:6px"><input type="radio" name="iemode" data-bind="iemode" value="upd" ${ie.mode==='upd'?'checked':''}> Tambah & perbarui</label>
+      <label class="tools" style="gap:6px"><input type="radio" name="iemode" data-bind="iemode" value="new" ${ie.mode==='new'?'checked':''}> Tambah yang baru saja</label>
+      <label class="tools" style="gap:6px"><input type="radio" name="iemode" data-bind="iemode" value="sync" ${ie.mode==='sync'?'checked':''}> Sinkronkan (yang tidak ada di file dinonaktifkan)</label></div>
+    <div class="stats"><div class="stat g"><b>${c.baru}</b><span>Karyawan baru</span></div><div class="stat"><b>${c.update}</b><span>Diperbarui</span></div><div class="stat"><b>${c.sama+c.skip}</b><span>Tanpa perubahan</span></div><div class="stat ${c.error?'b':''}"><b>${c.error}</b><span>Bermasalah (dilewati)</span></div>${ie.mode==='sync'?`<div class="stat w"><b>${r.gone}</b><span>Akan dinonaktifkan</span></div>`:''}</div>
+    ${r.probs.length?`<div><h2>Perlu dicek</h2><ul class="issues">${r.probs.slice(0,8).map(p=>`<li>Baris ${p.row}${p.id?' (ID '+esc(p.id)+')':''}: ${p.iss.map(esc).join(', ')}${p.st==='error'?' – dilewati':' – kolom ini diabaikan'}</li>`).join('')}${r.probs.length>8?`<li>dan ${r.probs.length-8} lainnya</li>`:''}</ul></div>`:''}
+    ${S.demo?'<p class="sub" style="color:var(--warn)">Data contoh yang masih ada (karyawan, absensi, SPL) akan dihapus otomatis saat Anda menerapkan impor ini, supaya tidak tercampur dengan data asli.</p>':''}<p class="sub">Karyawan yang tidak ada di file tidak dihapus, hanya dinonaktifkan jika Anda memilih mode Sinkronkan. Yang nonaktif disembunyikan dari daftar dan tidak masuk hitungan harian.</p>
+    <div class="tools"><button class="btn primary" data-act="applyie" ${c.baru+c.update+(ie.mode==='sync'?r.gone:0)?'':'disabled'}>Terapkan</button><button class="btn" data-act="cancelie">Batal</button></div></section>`;
+}
+function startIe(rows,file){
+  if(!rows.length)throw new Error('Data kosong.');
+  const g=ieGuess(rows);ui.ie={file,rows,head:g.head,data:g.data,map:g.map,ncol:g.ncol,mode:'upd'};ieAnalyze();
+}
+function applyIe(){
+  const ie=ui.ie;if(S.demo){S.emps=[];S.att={};S.spl=[];S.imports=[];S.demo=false;ieAnalyze()}const r=ie.res,ids=new Set();let a=0,u=0;
+  r.items.forEach(it=>{
+    if(it.st==='error')return;ids.add(it.id);
+    const clean={...it.rec};
+    if(it.st==='baru'){S.emps.push({id:it.id,name:'Karyawan '+it.id,dept:'Belum diatur',pos:'',sched:'tetap',shift:S.set.shifts[0].id,pay:'Bulanan',rate:0,ot:false,off:false,...clean});a++}
+    else if(it.st==='update'){Object.assign(S.emps.find(e=>e.id===it.id),clean);u++}
+  });
+  let off=0;if(ie.mode==='sync')S.emps.forEach(e=>{if(!ids.has(e.id)&&!e.off){e.off=true;off++}});
+  S.emps.sort((x,y)=>x.id.localeCompare(y.id,undefined,{numeric:true}));
+  if(S.demo&&a)S.demo=false;
+  save();ui.ie=null;render();toast(`Selesai: ${a} baru, ${u} diperbarui${off?', '+off+' dinonaktifkan':''}`);
+}
+ACT.readpaste=()=>{const t=$('#paste').value;if(!t.trim()){toast('Tempel data dulu');return}try{startIe(parseText(t),'Data tempelan')}catch(e){ui.ie={err:e.message}}$('#iebox').innerHTML=ieBox()};
+ACT.applyie=()=>applyIe();
+ACT.cancelie=()=>{ui.ie=null;$('#iebox').innerHTML=''};
+ACT.copytpl=()=>copyText(TEMPLATE,'Template tersalin, tempel di Excel');
+ACT.dltpl=()=>download('template-karyawan.csv',TEMPLATE.split('\n').map(l=>l.split('\t').join(',')).join('\n'),'text/csv');
+BIND.iemap=t=>{ui.ie.map[t.dataset.k]=+t.value;ieAnalyze();$('#iebox').innerHTML=ieBox()};
+BIND.iemode=t=>{ui.ie.mode=t.value;ieAnalyze();$('#iebox').innerHTML=ieBox()};
+boot({view:'impor-karyawan',need:NEED,after:()=>wireDrop('#drop2','#file2',async f=>{try{startIe(await readRows(f),f.name)}catch(e){ui.ie={err:e.message||'File tidak bisa dibaca.'}}$('#iebox').innerHTML=ieBox()})});
+
+</script>
+</body>
+</html>

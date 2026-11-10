@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Karyawan · Absensi Karyawan</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div id="layer"></div>
+<div id="toast" class="toast" hidden></div>
+<script src="assets/data.js"></script>
+<script src="assets/layout.js"></script>
+<script>if(typeof boot==='undefined'||typeof S==='undefined'){document.body.innerHTML='<p style="padding:24px;font:16px system-ui,sans-serif">File aplikasi belum lengkap. Unggah folder assets (style.css, data.js, layout.js) bersama semua halaman ke GitHub.</p>'}</script>
+<script>
+const NEED={data:'1.0',layout:'1.0'};
+V.karyawan=()=>tb('Daftar karyawan',`<button class="btn" data-act="goto" data-href="impor-karyawan.html">Impor karyawan</button><button class="btn bad" data-act="delallmodal">Hapus semua</button><button class="btn primary" data-act="newemp">Tambah</button>`,'Atur jadwal, kelompok gaji, tarif lembur dan siapa yang berhak lembur. Centang beberapa orang untuk mengubah sekaligus.')+
+  `<section class="panel"><div class="tools" style="padding:12px 14px;border-bottom:1px solid var(--line)"><select data-bind="dept" id="deptsel">${deptOpts(ui.dept)}</select><select data-bind="pay" id="paysel">${payOpts(ui.pay)}</select><input type="text" id="q" data-bind="q" placeholder="Cari nama, ID, jabatan" value="${esc(ui.q)}"><label class="tools" style="gap:8px;font-weight:600"><span class="sw"><input type="checkbox" data-bind="showoff" ${ui.showOff?'checked':''} aria-label="Tampilkan nonaktif"><i></i></span>Tampilkan nonaktif</label></div><div id="list">${LST.karyawan()}</div></section>`;
+const kRows=()=>S.emps.filter(e=>matchQ(e)&&(ui.showOff||!e.off));
+LST.karyawan=()=>{
+  const rows=kRows(),sl=rows.slice(ui.page*PS,(ui.page+1)*PS),n=ui.sel.size;
+  const allOn=rows.length&&rows.every(e=>ui.sel.has(e.id));
+  return (n?`<div class="bulk"><b>${n} dipilih</b><button class="btn sm" data-act="bk" data-f="ot" data-v="1">Izinkan lembur</button><button class="btn sm" data-act="bk" data-f="ot" data-v="0">Cabut lembur</button><button class="btn sm" data-act="bk" data-f="sched" data-v="bergilir">Jadwal bergilir</button><button class="btn sm" data-act="bk" data-f="sched" data-v="tetap">Jadwal tetap</button>
+   <select data-bind="bkpay" aria-label="Kelompok gaji"><option value="">Kelompok gaji…</option>${PAYS.map(p=>`<option>${p}</option>`).join('')}</select><select data-bind="bkshift" aria-label="Shift tetap"><option value="">Shift tetap…</option>${S.set.shifts.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select>
+   <input type="number" id="bkrate" min="0" step="500" placeholder="Tarif/jam" style="width:110px"><button class="btn sm" data-act="bkrate">Terapkan tarif</button><button class="btn sm bad" data-act="bk" data-f="off" data-v="1">Nonaktifkan</button><button class="btn sm" data-act="bk" data-f="off" data-v="0">Aktifkan</button><button class="btn sm bad" data-act="delselmodal">Hapus terpilih</button><button class="btn sm" data-act="bkclear">Batal pilih</button></div>`:'')+
+  `<div class="scroll"><table><thead><tr><th><label class="sw" title="Pilih semua yang tampil"><input type="checkbox" data-act="selall" ${allOn?'checked':''} aria-label="Pilih semua"><i></i></label></th><th>ID</th><th>Nama</th><th>Departemen</th><th>Jadwal</th><th>Shift tetap</th><th>Kelompok gaji</th><th>Tarif/jam</th><th>Lembur</th><th>Aktif</th></tr></thead><tbody>
+  ${sl.map(e=>`<tr class="${e.off?'off':''}"><td>${sw('sel',e.id,ui.sel.has(e.id),'','Pilih')}</td><td class="mono">${esc(e.id)}</td><td style="white-space:nowrap"><button class="lnk" data-act="open" data-id="${esc(e.id)}">${esc(e.name)}</button>${e.pos?`<br><span class="muted">${esc(e.pos)}</span>`:''}</td><td>${esc(e.dept)}</td>
+   <td><select data-bind="emp" data-f="sched" data-id="${esc(e.id)}" aria-label="Jadwal"><option value="tetap" ${e.sched==='tetap'?'selected':''}>Tetap</option><option value="bergilir" ${e.sched==='bergilir'?'selected':''}>Bergilir</option></select></td>
+   <td><select data-bind="emp" data-f="shift" data-id="${esc(e.id)}" aria-label="Shift" ${e.sched==='bergilir'?'disabled':''}>${S.set.shifts.map(s=>`<option value="${s.id}" ${s.id===e.shift?'selected':''}>${esc(s.name)}</option>`).join('')}</select></td>
+   <td><select data-bind="emp" data-f="pay" data-id="${esc(e.id)}" aria-label="Kelompok gaji">${PAYS.map(p=>`<option ${p===e.pay?'selected':''}>${p}</option>`).join('')}</select></td>
+   <td><input type="number" min="0" step="500" style="width:90px" data-bind="emp" data-f="rate" data-id="${esc(e.id)}" value="${e.rate||''}" placeholder="${S.set.rate}" aria-label="Tarif lembur per jam"></td>
+   <td>${sw('emp',e.id,e.ot,'data-f="ot"','Boleh lembur')}</td><td>${sw('emp',e.id,!e.off,'data-f="on"','Aktif')}</td></tr>`).join('')||'<tr><td colspan="10" class="empty">Tidak ada karyawan.</td></tr>'}</tbody></table></div>${pager(rows.length)}
+  <div class="pager"><span>${S.emps.length} karyawan · ${actE().length} aktif · ${S.emps.filter(e=>e.ot&&!e.off).length} berhak lembur · tarif kosong memakai tarif umum ${rp(S.set.rate)}</span></div>`;
+};
+function newEmpModal(){
+  modal(`<div class="tb" style="padding:0"><h1>Tambah karyawan</h1><button class="btn" data-act="closemodal">Tutup</button></div>
+  <div class="form"><label class="f">ID / PIN fingerprint<input type="text" id="ne-id"></label><label class="f">Nama<input type="text" id="ne-name"></label><label class="f">Departemen<input type="text" id="ne-dept" list="dl"></label><datalist id="dl">${depts().map(d=>`<option value="${esc(d)}">`).join('')}</datalist>
+  <label class="f">Jabatan<input type="text" id="ne-pos"></label><label class="f">Jadwal<select id="ne-sched"><option value="tetap">Shift tetap</option><option value="bergilir">Shift bergilir</option></select></label>
+  <label class="f">Shift tetap<select id="ne-shift">${S.set.shifts.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select></label>
+  <label class="f">Kelompok gaji<select id="ne-pay">${PAYS.map(p=>`<option ${p==='Bulanan'?'selected':''}>${p}</option>`).join('')}</select></label><label class="f">Tarif lembur/jam (kosong = umum)<input type="number" id="ne-rate" min="0" step="500"></label></div>
+  <label style="display:flex;gap:10px;align-items:center;font-weight:600"><span class="sw"><input type="checkbox" id="ne-ot"><i></i></span>Boleh lembur</label>
+  <div id="ne-err" style="color:var(--bad)"></div>
+  <div class="tools" style="justify-content:flex-end"><button class="btn" data-act="closemodal">Batal</button><button class="btn primary" data-act="saveemp">Simpan</button></div>`);
+}
+Object.assign(ACT,{
+  newemp(){newEmpModal()},
+  saveemp(){const id=normId($('#ne-id').value),name=$('#ne-name').value.trim(),err=m=>$('#ne-err').textContent=m;
+    if(!id||!name)return err('ID dan nama wajib diisi.');if(S.emps.some(e=>e.id===id))return err('ID sudah dipakai.');
+    S.emps.push({id,name,dept:$('#ne-dept').value.trim()||'Belum diatur',pos:$('#ne-pos').value.trim(),sched:$('#ne-sched').value,shift:$('#ne-shift').value,pay:$('#ne-pay').value,rate:+$('#ne-rate').value||0,ot:$('#ne-ot').checked,off:false});
+    save();layer().innerHTML='';render();toast('Karyawan ditambahkan')},
+  selall(a){const rows=kRows();if(a.checked)rows.forEach(e=>ui.sel.add(e.id));else rows.forEach(e=>ui.sel.delete(e.id));refresh()},
+  bk(a){const f=a.dataset.f,v=a.dataset.v;S.emps.forEach(e=>{if(!ui.sel.has(e.id))return;if(f==='ot')e.ot=v==='1';if(f==='sched')e.sched=v;if(f==='off')e.off=v==='1'});save();toast(ui.sel.size+' karyawan diubah');ui.sel=new Set();render()},
+  bkrate(){const v=+$('#bkrate').value;if(!(v>=0)||$('#bkrate').value===''){toast('Isi tarif dulu');return}S.emps.forEach(e=>{if(ui.sel.has(e.id))e.rate=v});save();toast(ui.sel.size+' karyawan diubah');ui.sel=new Set();render()},
+  bkclear(){ui.sel=new Set();refresh()},
+  delallmodal(){if(!S.emps.length){toast('Daftar karyawan sudah kosong');return}
+    modal(`<div class="tb" style="padding:0"><h1>Hapus semua karyawan</h1><button class="btn" data-act="closemodal">Tutup</button></div>
+    <p>Daftar <b>${S.emps.length} karyawan</b> akan dihapus. Data scan dan SPL tidak ikut terhapus: jika Anda mengimpor ulang dengan ID yang sama, absensi lama menempel kembali.</p>
+    <p class="sub">Karyawan yang sudah resign lebih baik dinonaktifkan, bukan dihapus. Penghapusan tidak bisa dibatalkan, jadi simpan cadangan dulu.</p>
+    <div class="tools"><button class="btn" data-act="copybackup">Salin cadangan</button><button class="btn" data-act="dlbackup">Unduh cadangan</button></div>
+    <label class="f">Ketik HAPUS untuk melanjutkan<input type="text" id="del-conf" data-bind="delconf" autocomplete="off"></label>
+    <div class="tools" style="justify-content:flex-end"><button class="btn" data-act="closemodal">Batal</button><button class="btn bad" id="del-go" data-act="delall" disabled>Hapus semua karyawan</button></div>`)},
+  delall(){if(($('#del-conf')||{}).value!=='HAPUS')return;const n=S.emps.length;S.emps=[];ui.sel=new Set();layer().innerHTML='';save();render();toast(`${n} karyawan dihapus. Absensi dan SPL tetap tersimpan.`)},
+  delselmodal(){const n=ui.sel.size;if(!n){toast('Pilih karyawan dulu');return}
+    modal(`<div class="tb" style="padding:0"><h1>Hapus ${n} karyawan?</h1><button class="btn" data-act="closemodal">Tutup</button></div>
+    <p>Data scan dan SPL mereka tetap tersimpan, tapi tidak tampil lagi di daftar dan rekap. Karyawan yang sudah resign lebih baik dinonaktifkan. Penghapusan tidak bisa dibatalkan.</p>
+    <div class="tools" style="justify-content:flex-end"><button class="btn" data-act="closemodal">Batal</button><button class="btn bad" data-act="delsel">Hapus ${n} karyawan</button></div>`)},
+  delsel(){const n=ui.sel.size;S.emps=S.emps.filter(e=>!ui.sel.has(e.id));ui.sel=new Set();layer().innerHTML='';save();render();toast(n+' karyawan dihapus')},
+});
+Object.assign(BIND,{
+  showoff(t){ui.showOff=t.checked;ui.page=0;refresh()},
+  sel(t){t.checked?ui.sel.add(t.dataset.id):ui.sel.delete(t.dataset.id);refresh()},
+  emp(t){const x=S.emps.find(y=>y.id===t.dataset.id),f=t.dataset.f;if(!x)return;
+    if(f==='ot')x.ot=t.checked;else if(f==='on')x.off=!t.checked;else if(f==='rate')x.rate=Math.max(0,+t.value||0);else x[f]=t.value;
+    save();if(['sched','on'].includes(f)){const y=window.scrollY;refresh();window.scrollTo(0,y)}},
+  bkpay(t){if(t.value){S.emps.forEach(x=>{if(ui.sel.has(x.id))x.pay=t.value});save();toast(ui.sel.size+' karyawan diubah');ui.sel=new Set();render()}},
+  bkshift(t){if(t.value){S.emps.forEach(x=>{if(ui.sel.has(x.id)){x.shift=t.value;x.sched='tetap'}});save();toast(ui.sel.size+' karyawan diubah');ui.sel=new Set();render()}},
+  delconf(t){$('#del-go').disabled=t.value.trim()!=='HAPUS'}
+});
+boot({view:'karyawan',need:NEED});
+
+</script>
+</body>
+</html>
