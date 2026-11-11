@@ -38,7 +38,7 @@ function impBox(){
       <label class="f">Tanggal & waktu<select data-bind="map" data-k="dt">${colOpts(im,im.map.dt)}</select></label>
       <label class="f">Jam terpisah (opsional)<select data-bind="map" data-k="tm">${colOpts(im,im.map.tm,'Tidak ada')}</select></label></div>
     ${r?`<div class="stats"><div class="stat"><b>${r.valid}</b><span>Scan terbaca</span></div><div class="stat ${r.bad?'w':''}"><b>${r.bad}</b><span>Baris dilewati</span></div><div class="stat"><b>${r.ids.size}</b><span>Karyawan</span></div><div class="stat ${r.unknown?'w':''}"><b>${r.unknown}</b><span>ID belum terdaftar</span></div><div class="stat"><b>${r.groups.size}</b><span>Hari-orang</span></div></div>
-    ${im.wide?'<p class="sub">Format dengan kolom Scan 1\u20134 terdeteksi: setiap kolom Scan dibaca sebagai satu scan. Kolom ID/PIN dipakai sebagai ID karyawan; ganti di pilihan ID bila daftar karyawan Anda memakai kolom lain (misalnya NIP).</p>':''}${r.auto&&r.auto.size?`<p class="sub">${r.auto.size} karyawan baru ditandai <b>bergilir</b> karena jam scan mereka berpindah antara pagi, siang dan malam. Bisa diubah di menu Karyawan.</p>`:''}<p class="sub">Periode ${r.min?fmtDate(r.min)+' sampai '+fmtDate(r.max):'—'}. Masuk = scan pertama, pulang = scan terakhir; scan tunggal ditandai "Tidak lengkap". Untuk karyawan shift malam dan bergilir, scan dikelompokkan per giliran kerja dan shift ditentukan dari jam masuk.${r.unknown?' ID yang belum terdaftar ditambahkan sebagai karyawan baru dengan jadwal tetap Kantor. Sebaiknya impor daftar karyawan dulu.':''}</p>
+    ${im.wide?'<p class="sub">Format dengan kolom Scan 1\u20134 terdeteksi: setiap kolom Scan dibaca sebagai satu scan. Kolom ID/PIN dipakai sebagai ID karyawan; ganti di pilihan ID bila daftar karyawan Anda memakai kolom lain (misalnya NIP).</p>':''}${r.auto&&r.auto.size?`<p class="sub">${r.auto.size} karyawan baru ditandai <b>bergilir</b> berdasarkan NIP (bukan kantor) atau pola jam scan. Karyawan dengan NIP angka saja atau ADM otomatis menjadi orang kantor (jadwal tetap, shift Kantor). Semua bisa diubah di menu Karyawan.</p>`:''}<p class="sub">Periode ${r.min?fmtDate(r.min)+' sampai '+fmtDate(r.max):'—'}. Masuk = scan pertama, pulang = scan terakhir; scan tunggal ditandai "Tidak lengkap". Untuk karyawan shift malam dan bergilir, scan dikelompokkan per giliran kerja dan shift ditentukan dari jam masuk.${r.unknown?' ID yang belum terdaftar ditambahkan sebagai karyawan baru dengan jadwal tetap Kantor. Sebaiknya impor daftar karyawan dulu.':''}</p>
     <div class="tools"><button class="btn primary" data-act="applyimp" ${r.valid?'':'disabled'}>Terapkan ke absensi</button><button class="btn" data-act="cancelimp">Batal</button></div>`:''}
   </section>`;
 }
@@ -50,7 +50,8 @@ function parseDT(s){
   return {date:`${y}-${pad(mo)}-${pad(d)}`,time:pad(+t[1])+':'+t[2]};
 }
 const NIPDEPT={OP:'Operator',ADM:'Admin',GB:'Gudang Bahan',G:'Gudang',B:'Bengkel',T:'Teknisi'};
-const deptOfNip=n=>{const m=String(n||'').toUpperCase().match(/^([A-Z]+)/);return m&&NIPDEPT[m[1]]||''};
+const kindOfNip=n=>{n=String(n||'').trim();return !n?'':(/^\d+$/.test(n)||/^ADM/i.test(n))?'kantor':'gilir'};
+const deptOfNip=n=>{n=String(n||'').trim();if(/^\d+$/.test(n))return 'Kantor';const m=String(n||'').toUpperCase().match(/^([A-Z]+)/);return m&&NIPDEPT[m[1]]||''};
 
 /* Format lebar: satu baris per orang per hari dengan kolom Scan 1..4 (dan judul dua baris). Diubah jadi satu baris per scan. */
 function widen(rows){
@@ -95,7 +96,7 @@ function analyze(){
   const add=(id,dn,a,b,n)=>{const k=id+'|'+numDate(dn),g=groups.get(k);if(!g)groups.set(k,{a,b,n});else{g.a=Math.min(g.a,a);g.b=Math.max(g.b,b);g.n+=n}};
   ids.forEach(id=>{
     const arr=per[id].sort((x,y)=>x-y),e=EM.get(id);let sess=e&&(e.sched==='bergilir'||isNight(shiftOf(e)));
-    if(!e){const f={};arr.forEach(v=>{const dn=Math.floor(v/1440),t=v-dn*1440;if(f[dn]==null||t<f[dn])f[dn]=t});if(Object.values(f).filter(t=>t>=780||t<300).length>=2){sess=true;auto.add(id)}}
+    const kd=kindOfNip(nips[id]);if(!e&&kd==='gilir'){sess=true;auto.add(id)}else if(!e&&kd==='kantor'){sess=false}else if(!e){const f={};arr.forEach(v=>{const dn=Math.floor(v/1440),t=v-dn*1440;if(f[dn]==null||t<f[dn])f[dn]=t});if(Object.values(f).filter(t=>t>=780||t<300).length>=2){sess=true;auto.add(id)}}
     if(!sess){arr.forEach(v=>{const dn=Math.floor(v/1440),t=v-dn*1440;add(id,dn,t,t,1)});return}
     let start=arr[0],prev=arr[0],cnt=1;
     const flush=()=>{const dn=Math.floor(start/1440);add(id,dn,start-dn*1440,prev-dn*1440,cnt)};
@@ -114,8 +115,8 @@ async function handleFile(f){
 }
 function applyImport(){
   const r=ui.imp.res;let newE=0;
-  r.ids.forEach(id=>{if(!S.emps.find(e=>e.id===id)){S.emps.push({id,name:r.names[id]||'Karyawan '+id,dept:deptOfNip(r.nips[id])||'Belum diatur',pos:'',sched:r.auto.has(id)?'bergilir':'tetap',shift:S.set.shifts[0].id,pay:'Bulanan',rate:0,ot:false,off:false});newE++}});
-  let depN=0;S.emps.forEach(e=>{const d=deptOfNip(r.nips[e.id]);if(d&&(!e.dept||e.dept==='Belum diatur')){e.dept=d;depN++}});
+  r.ids.forEach(id=>{if(!S.emps.find(e=>e.id===id)){S.emps.push({id,nip:r.nips[id]||'',name:r.names[id]||'Karyawan '+id,dept:deptOfNip(r.nips[id])||'Belum diatur',pos:'',sched:r.auto.has(id)?'bergilir':'tetap',shift:S.set.shifts[0].id,pay:'Bulanan',rate:0,ot:false,off:false});newE++}});
+  let depN=0;S.emps.forEach(e=>{if(r.nips[e.id])e.nip=r.nips[e.id];const d=deptOfNip(r.nips[e.id]);if(d&&(!e.dept||e.dept==='Belum diatur')){e.dept=d;depN++}});
   let fixN=0;S.emps.forEach(e=>{const nm=r.names[e.id];if(nm&&(!e.name||e.name==='Karyawan '+e.id)){e.name=nm;fixN++}});
   const EM=EMap();
   r.groups.forEach((g,k)=>{
