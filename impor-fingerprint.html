@@ -49,6 +49,8 @@ function parseDT(s){
   const t=s.match(/(\d{1,2}):(\d{2})/);if(!t||mo<1||mo>12||d<1||d>31)return null;
   return {date:`${y}-${pad(mo)}-${pad(d)}`,time:pad(+t[1])+':'+t[2]};
 }
+const NIPDEPT={OP:'Operator',ADM:'Admin',GB:'Gudang Bahan',G:'Gudang',B:'Bengkel',T:'Teknisi'};
+const deptOfNip=n=>{const m=String(n||'').toUpperCase().match(/^([A-Z]+)/);return m&&NIPDEPT[m[1]]||''};
 
 /* Format lebar: satu baris per orang per hari dengan kolom Scan 1..4 (dan judul dua baris). Diubah jadi satu baris per scan. */
 function widen(rows){
@@ -69,10 +71,11 @@ function guess(rows){
   const first=rows[0]||[],hasHead=first.some(c=>/[a-zA-Z]{3,}/.test(c))&&!first.some(c=>DT.test(c));
   const head=hasHead?first.map(String):null,data=hasHead?rows.slice(1):rows,smp=data.slice(0,30),n=Math.max(...rows.slice(0,30).map(r=>r.length),1);
   const frac=(i,fn)=>smp.length?smp.filter(r=>fn(String(r[i]??''))).length/smp.length:0;
-  const map={id:-1,name:-1,dt:-1,tm:-1};
+  const map={id:-1,name:-1,dt:-1,tm:-1,nip:-1};
   for(let i=0;i<n;i++){const h=head?String(head[i]).toLowerCase():'';
     if(map.id<0&&/pin|\bid\b|badge|nik|no\.?\s*id|userid/.test(h))map.id=i;
-    if(map.name<0&&/nama|name/.test(h))map.name=i;}
+    if(map.name<0&&/nama|name/.test(h))map.name=i;
+    if(map.nip<0&&/^nip$/.test(h))map.nip=i;}
   for(let i=0;i<n;i++){if(frac(i,s=>DT.test(s)&&TM.test(s))>.6){map.dt=i;break}}
   if(map.dt<0){for(let i=0;i<n;i++)if(frac(i,s=>DT.test(s))>.6){map.dt=i;break}
     for(let i=0;i<n;i++)if(i!==map.dt&&frac(i,s=>TM.test(s)&&!DT.test(s))>.6){map.tm=i;break}}
@@ -81,11 +84,11 @@ function guess(rows){
   return {head,data,map,ncol:n};
 }
 function analyze(){
-  const im=ui.imp,m=im.map,per={},names={};let valid=0,bad=0;
+  const im=ui.imp,m=im.map,per={},names={},nips={};let valid=0,bad=0;
   im.data.forEach(r=>{
     const id=normId(r[m.id]??'');let s=String(r[m.dt]??'');if(m.tm>=0)s+=' '+(r[m.tm]??'');
     const p=parseDT(s);if(!id||!p){bad++;return}
-    valid++;if(m.name>=0&&r[m.name])names[id]=String(r[m.name]).trim();
+    valid++;if(m.name>=0&&r[m.name])names[id]=String(r[m.name]).trim();if(m.nip>=0&&r[m.nip])nips[id]=String(r[m.nip]).trim();
     (per[id]=per[id]||[]).push(dayNum(p.date)*1440+toMin(p.time));
   });
   const EM=EMap(),groups=new Map(),ids=new Set(Object.keys(per)),auto=new Set();
@@ -100,7 +103,7 @@ function analyze(){
     flush();
   });
   let min='',max='';groups.forEach((g,k)=>{const d=k.split('|')[1];if(!min||d<min)min=d;if(!max||d>max)max=d});
-  im.res={valid,bad,ids,groups,names,auto,min,max,unknown:[...ids].filter(i=>!EM.has(i)).length};
+  im.res={valid,bad,ids,groups,names,nips,auto,min,max,unknown:[...ids].filter(i=>!EM.has(i)).length};
 }
 async function handleFile(f){
   try{
@@ -111,7 +114,8 @@ async function handleFile(f){
 }
 function applyImport(){
   const r=ui.imp.res;let newE=0;
-  r.ids.forEach(id=>{if(!S.emps.find(e=>e.id===id)){S.emps.push({id,name:r.names[id]||'Karyawan '+id,dept:'Belum diatur',pos:'',sched:r.auto.has(id)?'bergilir':'tetap',shift:S.set.shifts[0].id,pay:'Bulanan',rate:0,ot:false,off:false});newE++}});
+  r.ids.forEach(id=>{if(!S.emps.find(e=>e.id===id)){S.emps.push({id,name:r.names[id]||'Karyawan '+id,dept:deptOfNip(r.nips[id])||'Belum diatur',pos:'',sched:r.auto.has(id)?'bergilir':'tetap',shift:S.set.shifts[0].id,pay:'Bulanan',rate:0,ot:false,off:false});newE++}});
+  let depN=0;S.emps.forEach(e=>{const d=deptOfNip(r.nips[e.id]);if(d&&(!e.dept||e.dept==='Belum diatur')){e.dept=d;depN++}});
   let fixN=0;S.emps.forEach(e=>{const nm=r.names[e.id];if(nm&&(!e.name||e.name==='Karyawan '+e.id)){e.name=nm;fixN++}});
   const EM=EMap();
   r.groups.forEach((g,k)=>{
@@ -122,7 +126,7 @@ function applyImport(){
   });
   (S.imports=S.imports||[]).unshift({file:ui.imp.file,at:new Date().toLocaleString('id-ID'),rows:r.valid,days:r.groups.size,newEmps:newE});
   ui.day=r.max;ui.from=r.max.slice(0,7)+'-01';ui.to=r.max;S.emps.sort((a,b)=>a.id.localeCompare(b.id,undefined,{numeric:true}));
-  save();ui.imp=null;render();toast(`Impor selesai: ${r.groups.size} hari-orang${fixN?', '+fixN+' nama diperbarui':''}`);
+  save();ui.imp=null;render();toast(`Impor selesai: ${r.groups.size} hari-orang${fixN?', '+fixN+' nama diperbarui':''}${depN?', '+depN+' departemen diisi':''}`);
 }
 ACT.applyimp=()=>applyImport();
 ACT.cancelimp=()=>{ui.imp=null;$('#impbox').innerHTML=''};
