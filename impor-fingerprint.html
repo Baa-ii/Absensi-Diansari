@@ -38,7 +38,7 @@ function impBox(){
       <label class="f">Tanggal & waktu<select data-bind="map" data-k="dt">${colOpts(im,im.map.dt)}</select></label>
       <label class="f">Jam terpisah (opsional)<select data-bind="map" data-k="tm">${colOpts(im,im.map.tm,'Tidak ada')}</select></label></div>
     ${r?`<div class="stats"><div class="stat"><b>${r.valid}</b><span>Scan terbaca</span></div><div class="stat ${r.bad?'w':''}"><b>${r.bad}</b><span>Baris dilewati</span></div><div class="stat"><b>${r.ids.size}</b><span>Karyawan</span></div><div class="stat ${r.unknown?'w':''}"><b>${r.unknown}</b><span>ID belum terdaftar</span></div><div class="stat"><b>${r.groups.size}</b><span>Hari-orang</span></div></div>
-    <p class="sub">Periode ${r.min?fmtDate(r.min)+' sampai '+fmtDate(r.max):'—'}. Masuk = scan pertama, pulang = scan terakhir; scan tunggal ditandai "Tidak lengkap". Untuk karyawan shift malam dan bergilir, scan dikelompokkan per giliran kerja dan shift ditentukan dari jam masuk.${r.unknown?' ID yang belum terdaftar ditambahkan sebagai karyawan baru dengan jadwal tetap Kantor. Sebaiknya impor daftar karyawan dulu.':''}</p>
+    ${im.wide?'<p class="sub">Format dengan kolom Scan 1\u20134 terdeteksi: setiap kolom Scan dibaca sebagai satu scan. Kolom ID/PIN dipakai sebagai ID karyawan; ganti di pilihan ID bila daftar karyawan Anda memakai kolom lain (misalnya NIP).</p>':''}${r.auto&&r.auto.size?`<p class="sub">${r.auto.size} karyawan baru ditandai <b>bergilir</b> karena jam scan mereka berpindah antara pagi, siang dan malam. Bisa diubah di menu Karyawan.</p>`:''}<p class="sub">Periode ${r.min?fmtDate(r.min)+' sampai '+fmtDate(r.max):'—'}. Masuk = scan pertama, pulang = scan terakhir; scan tunggal ditandai "Tidak lengkap". Untuk karyawan shift malam dan bergilir, scan dikelompokkan per giliran kerja dan shift ditentukan dari jam masuk.${r.unknown?' ID yang belum terdaftar ditambahkan sebagai karyawan baru dengan jadwal tetap Kantor. Sebaiknya impor daftar karyawan dulu.':''}</p>
     <div class="tools"><button class="btn primary" data-act="applyimp" ${r.valid?'':'disabled'}>Terapkan ke absensi</button><button class="btn" data-act="cancelimp">Batal</button></div>`:''}
   </section>`;
 }
@@ -49,6 +49,22 @@ function parseDT(s){
   const t=s.match(/(\d{1,2}):(\d{2})/);if(!t||mo<1||mo>12||d<1||d>31)return null;
   return {date:`${y}-${pad(mo)}-${pad(d)}`,time:pad(+t[1])+':'+t[2]};
 }
+
+/* Format lebar: satu baris per orang per hari dengan kolom Scan 1..4 (dan judul dua baris). Diubah jadi satu baris per scan. */
+function widen(rows){
+  const isScan=c=>/^scan\s*\d*$/i.test(String(c).trim());
+  let hi=-1;for(let i=0;i<Math.min(8,rows.length);i++){if(rows[i].filter(isScan).length>=1){hi=i;break}}
+  if(hi<0)return null;
+  const h=rows[hi].map(c=>String(c).trim()),sc=[];h.forEach((c,i)=>{if(isScan(c))sc.push(i)});
+  const dc=h.findIndex(c=>/tanggal|date|tgl/i.test(c));if(dc<0||dc>sc[0])return null;
+  const k=sc[0],out=[h.slice(0,k).concat(['Tanggal + scan'])];
+  for(let i=hi+1;i<rows.length;i++){
+    const r=rows[i],d=String(r[dc]??'').trim();if(!d)continue;
+    sc.forEach(c=>{const t=String(r[c]??'').trim();if(/^\d{1,2}:\d{2}/.test(t))out.push(r.slice(0,k).map(x=>String(x??'').trim()).concat([d+' '+t]))});
+  }
+  return out.length>1?out:null;
+}
+
 function guess(rows){
   const first=rows[0]||[],hasHead=first.some(c=>/[a-zA-Z]{3,}/.test(c))&&!first.some(c=>DT.test(c));
   const head=hasHead?first.map(String):null,data=hasHead?rows.slice(1):rows,smp=data.slice(0,30),n=Math.max(...rows.slice(0,30).map(r=>r.length),1);
@@ -72,10 +88,11 @@ function analyze(){
     valid++;if(m.name>=0&&r[m.name])names[id]=String(r[m.name]).trim();
     (per[id]=per[id]||[]).push(dayNum(p.date)*1440+toMin(p.time));
   });
-  const EM=EMap(),groups=new Map(),ids=new Set(Object.keys(per));
+  const EM=EMap(),groups=new Map(),ids=new Set(Object.keys(per)),auto=new Set();
   const add=(id,dn,a,b,n)=>{const k=id+'|'+numDate(dn),g=groups.get(k);if(!g)groups.set(k,{a,b,n});else{g.a=Math.min(g.a,a);g.b=Math.max(g.b,b);g.n+=n}};
   ids.forEach(id=>{
-    const arr=per[id].sort((x,y)=>x-y),e=EM.get(id),sess=e&&(e.sched==='bergilir'||isNight(shiftOf(e)));
+    const arr=per[id].sort((x,y)=>x-y),e=EM.get(id);let sess=e&&(e.sched==='bergilir'||isNight(shiftOf(e)));
+    if(!e){const f={};arr.forEach(v=>{const dn=Math.floor(v/1440),t=v-dn*1440;if(f[dn]==null||t<f[dn])f[dn]=t});if(Object.values(f).filter(t=>t>=780||t<300).length>=2){sess=true;auto.add(id)}}
     if(!sess){arr.forEach(v=>{const dn=Math.floor(v/1440),t=v-dn*1440;add(id,dn,t,t,1)});return}
     let start=arr[0],prev=arr[0],cnt=1;
     const flush=()=>{const dn=Math.floor(start/1440);add(id,dn,start-dn*1440,prev-dn*1440,cnt)};
@@ -83,18 +100,19 @@ function analyze(){
     flush();
   });
   let min='',max='';groups.forEach((g,k)=>{const d=k.split('|')[1];if(!min||d<min)min=d;if(!max||d>max)max=d});
-  im.res={valid,bad,ids,groups,names,min,max,unknown:[...ids].filter(i=>!EM.has(i)).length};
+  im.res={valid,bad,ids,groups,names,auto,min,max,unknown:[...ids].filter(i=>!EM.has(i)).length};
 }
 async function handleFile(f){
   try{
     const rows=await readRows(f);if(!rows.length)throw new Error('File kosong.');
-    const g=guess(rows);ui.imp={file:f.name,rows,head:g.head,data:g.data,map:g.map,ncol:g.ncol};analyze();
+    const w=widen(rows),rr=w||rows,g=guess(rr);ui.imp={file:f.name,wide:!!w,rows:rr,head:g.head,data:g.data,map:g.map,ncol:g.ncol};analyze();
   }catch(e){ui.imp={err:e.message||'File tidak bisa dibaca.'}}
   $('#impbox').innerHTML=impBox();
 }
 function applyImport(){
   const r=ui.imp.res;let newE=0;
-  r.ids.forEach(id=>{if(!S.emps.find(e=>e.id===id)){S.emps.push({id,name:r.names[id]||'Karyawan '+id,dept:'Belum diatur',pos:'',sched:'tetap',shift:S.set.shifts[0].id,pay:'Bulanan',rate:0,ot:false,off:false});newE++}});
+  r.ids.forEach(id=>{if(!S.emps.find(e=>e.id===id)){S.emps.push({id,name:r.names[id]||'Karyawan '+id,dept:'Belum diatur',pos:'',sched:r.auto.has(id)?'bergilir':'tetap',shift:S.set.shifts[0].id,pay:'Bulanan',rate:0,ot:false,off:false});newE++}});
+  let fixN=0;S.emps.forEach(e=>{const nm=r.names[e.id];if(nm&&(!e.name||e.name==='Karyawan '+e.id)){e.name=nm;fixN++}});
   const EM=EMap();
   r.groups.forEach((g,k)=>{
     const id=k.split('|')[0],e=EM.get(id),old=S.att[k]||{},rec={...old,in:fromMin(g.a%1440),out:fromMin(g.b%1440),n:g.n};
@@ -104,7 +122,7 @@ function applyImport(){
   });
   (S.imports=S.imports||[]).unshift({file:ui.imp.file,at:new Date().toLocaleString('id-ID'),rows:r.valid,days:r.groups.size,newEmps:newE});
   ui.day=r.max;ui.from=r.max.slice(0,7)+'-01';ui.to=r.max;S.emps.sort((a,b)=>a.id.localeCompare(b.id,undefined,{numeric:true}));
-  save();ui.imp=null;render();toast(`Impor selesai: ${r.groups.size} hari-orang`);
+  save();ui.imp=null;render();toast(`Impor selesai: ${r.groups.size} hari-orang${fixN?', '+fixN+' nama diperbarui':''}`);
 }
 ACT.applyimp=()=>applyImport();
 ACT.cancelimp=()=>{ui.imp=null;$('#impbox').innerHTML=''};
