@@ -1,5 +1,5 @@
 /* data.js — penyimpanan data, aturan absensi dan lembur, data contoh, pembaca file */
-(window.APPV=window.APPV||{}).data='1.0';
+(window.APPV=window.APPV||{}).data='1.1';
 const $=s=>document.querySelector(s);
 const pad=n=>String(n).padStart(2,'0');
 const toMin=t=>{if(!t)return null;const p=t.split(':');return +p[0]*60+ +p[1]};

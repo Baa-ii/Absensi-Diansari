@@ -1,9 +1,9 @@
 /* layout.js — kerangka halaman (bar atas, menu, panel kiri), kotak cari, rincian karyawan, dialog, dan penanganan klik */
-(window.APPV=window.APPV||{}).layout='1.0';
+(window.APPV=window.APPV||{}).layout='1.1';
 const SEC=[
  {k:'beranda',t:'Beranda',items:[{v:'ringkasan',href:'index.html',t:'Ringkasan harian'}]},
  {k:'absensi',t:'Absensi',items:[{v:'rekap',href:'rekap.html',t:'Rekap & tarikan'},{v:'impor',href:'impor-fingerprint.html',t:'Impor fingerprint'}]},
- {k:'lembur',t:'Lembur & SPL',items:[{v:'lembur',sub:'semua',href:'lembur.html#semua',t:'Semua SPL'},{v:'lembur',sub:'dibatalkan',href:'lembur.html#dibatalkan',t:'Dibatalkan'},{v:'lembur',sub:'tanpa-spl',href:'lembur.html#tanpa-spl',t:'Lembur tanpa SPL'}]},
+ {k:'lembur',t:'Lembur & SPL',items:[{v:'lembur',sub:'semua',href:'lembur.html#semua',t:'Semua SPL'},{v:'lembur',sub:'dibatalkan',href:'lembur.html#dibatalkan',t:'Dibatalkan'}]},
  {k:'karyawan',t:'Karyawan',items:[{v:'karyawan',href:'karyawan.html',t:'Daftar karyawan'},{v:'impor-karyawan',href:'impor-karyawan.html',t:'Impor karyawan'}]},
  {k:'pengaturan',t:'Pengaturan',items:[{v:'pengaturan',sub:'jam',href:'pengaturan.html#jam',t:'Jam kerja'},{v:'pengaturan',sub:'aturan',href:'pengaturan.html#aturan',t:'Aturan & tarif'},{v:'pengaturan',sub:'libur',href:'pengaturan.html#libur',t:'Hari libur'},{v:'pengaturan',sub:'data',href:'pengaturan.html#data',t:'Data & cadangan'}]}];
 const secOf=v=>SEC.find(s=>s.items.some(i=>i.v===v));
