@@ -21,17 +21,20 @@ const NEED={data:'1.1',layout:'1.1'};
 
 V.lembur=()=>{
   const tab=ui.splTab;
-  return tb(tab==='Dibatalkan'?'SPL dibatalkan':'Semua SPL',`<button class="btn" data-act="xlspl">Tarik ke Excel</button><button class="btn primary" data-act="newspl">Buat SPL</button>`,'SPL yang dibuat langsung berlaku. Lembur dibayar untuk karyawan berhak, sebesar yang lebih kecil antara jam SPL dan jam nyata.')+`<section class="panel"><div id="list">${LST.lembur()}</div></section>`;
+  return tb(tab==='Dibatalkan'?'SPL dibatalkan':'Semua SPL',`<button class="btn" data-act="xlspl">Tarik ke Excel</button><button class="btn primary" data-act="newspl">Buat SPL</button>`,'SPL yang dibuat langsung berlaku. Lembur dibayar untuk karyawan berhak, sebesar yang lebih kecil antara jam SPL dan jam nyata.')+`<section class="panel"><div class="tools" style="padding:12px 14px;border-bottom:1px solid var(--line)"><span class="muted">Tanggal shift</span><input type="date" data-bind="splfrom" value="${ui.sf||''}" aria-label="Dari tanggal"><span class="muted">sampai</span><input type="date" data-bind="splto" value="${ui.st||''}" aria-label="Sampai tanggal"><select data-bind="splsort" aria-label="Urutan"><option value="new" ${ui.ss!=='old'?'selected':''}>Terbaru dulu</option><option value="old" ${ui.ss==='old'?'selected':''}>Terlama dulu</option></select><button class="btn" data-act="splreset">Reset filter</button></div><div id="list">${LST.lembur()}</div></section>`;
 };
-const splRows=()=>S.spl.filter(s=>ui.splTab==='Semua'||s.status===ui.splTab).sort((a,b)=>a.date<b.date?1:-1);
+const SPS=10;
+const splRows=()=>{const f=ui.sf||'',t=ui.st||'',asc=ui.ss==='old';return S.spl.filter(s=>(ui.splTab==='Semua'||s.status===ui.splTab)&&(!f||s.date>=f)&&(!t||s.date<=t)).sort((a,b)=>(a.date===b.date?(a.id<b.id?1:-1)*(asc?-1:1):(a.date<b.date?1:-1)*(asc?-1:1)))};
+function spager(total){const pages=Math.max(1,Math.ceil(total/SPS));if(ui.page>=pages)ui.page=pages-1;if(ui.page<0)ui.page=0;
+  return `<div class="pager"><span>${total?ui.page*SPS+1:0}\u2013${Math.min(total,(ui.page+1)*SPS)} dari ${total} SPL</span><span class="tools"><button class="btn sm" data-act="prev" ${ui.page<=0?'disabled':''}>Sebelumnya</button><button class="btn sm" data-act="next" ${ui.page>=pages-1?'disabled':''}>Berikutnya</button></span></div>`}
 const counted=s=>ui.splTab==='Dibatalkan'||s.status==='Disetujui';
 LST.lembur=()=>{
-  const EM=EMap(),rows=splRows(),tot=rows.filter(counted).reduce((a,s)=>a+splCost(s,EM),0);
+  const EM=EMap(),rows=splRows(),tot=rows.filter(counted).reduce((a,s)=>a+splCost(s,EM),0),sl=(spager(rows.length),rows.slice(ui.page*SPS,(ui.page+1)*SPS));
   return `<div class="scroll"><table><thead><tr><th>Nomor</th><th>Tanggal shift</th><th>Jam</th><th>Departemen</th><th class="n">Orang</th><th class="n">Biaya maks.</th><th>Pekerjaan</th><th>Status</th><th></th></tr></thead><tbody>
-  ${rows.map(s=>`<tr><td class="mono">${esc(s.id)}${s.ed?` <span class="pill" title="Diubah ${esc(s.ed)}">diubah</span>`:''}</td><td>${fmtDate(s.date)}</td><td class="n">${s.start}\u2013${s.end}</td><td>${esc(s.dept||'\u2014')}</td><td class="n">${s.emps.length}</td><td class="n">${rp(splCost(s,EM))}</td><td>${esc(s.reason)}${s.note?`<br><span class="muted">${esc(s.note)}</span>`:''}</td>
+  ${sl.map(s=>`<tr><td class="mono">${esc(s.id)}${s.ed?` <span class="pill" title="Diubah ${esc(s.ed)}">diubah</span>`:''}</td><td>${fmtDate(s.date)}</td><td class="n">${s.start}\u2013${s.end}</td><td>${esc(s.dept||'\u2014')}</td><td class="n">${s.emps.length}</td><td class="n">${rp(splCost(s,EM))}</td><td>${esc(s.reason)}${s.note?`<br><span class="muted">${esc(s.note)}</span>`:''}</td>
     <td><span class="pill ${s.status==='Disetujui'?'good':s.status==='Dibatalkan'?'bad':'warn'}">${s.status}</span></td>
     <td><span class="tools" style="flex-wrap:nowrap">${s.status==='Disetujui'?`<button class="btn sm" data-act="editspl" data-id="${esc(s.id)}">Edit</button><button class="btn sm bad" data-act="cancelspl" data-id="${esc(s.id)}">${ui.cx===s.id?'Yakin batalkan?':'Batalkan'}</button>`:`<button class="btn sm" data-act="restorespl" data-id="${esc(s.id)}">Aktifkan lagi</button>`}<button class="btn sm" data-act="viewspl" data-id="${esc(s.id)}">Lihat</button></span></td></tr>`).join('')||'<tr><td colspan="9" class="empty">Belum ada SPL di bagian ini.</td></tr>'}</tbody>
-  ${rows.length?`<tfoot><tr><td colspan="5"><b>Total ${ui.splTab==='Dibatalkan'?'SPL dibatalkan':'SPL aktif'}</b></td><td class="n"><b>${rp(tot)}</b></td><td colspan="3"></td></tr></tfoot>`:''}</table></div>`;
+  ${rows.length?`<tfoot><tr><td colspan="5"><b>Total ${ui.splTab==='Dibatalkan'?'SPL dibatalkan':'SPL aktif'}</b> <span class="muted">(semua halaman sesuai filter)</span></td><td class="n"><b>${rp(tot)}</b></td><td colspan="3"></td></tr></tfoot>`:''}</table></div>${spager(rows.length)}`;
 };
 function numFmt(ws,cols){const r=XLSX.utils.decode_range(ws['!ref']);for(let R=1;R<=r.e.r;R++)cols.forEach(C=>{const c=ws[XLSX.utils.encode_cell({r:R,c:C})];if(c&&c.t==='n')c.z='#,##0'})}
 function xlSPL(){
@@ -94,12 +97,16 @@ Object.assign(ACT,{
   editspl(a){newSplModal(a.dataset.id)},
   cancelspl(a){const id=a.dataset.id;if(ui.cx!==id){ui.cx=id;refresh();return}ui.cx=null;S.spl.find(x=>x.id===id).status='Dibatalkan';save();render();toast('SPL dibatalkan')},
   restorespl(a){S.spl.find(x=>x.id===a.dataset.id).status='Disetujui';save();render();toast('SPL diaktifkan lagi')},
+  splreset(){ui.sf='';ui.st='';ui.ss='new';ui.page=0;render()},
   newspl(){newSplModal()},savespl(){saveSpl()},
   pickall(){document.querySelectorAll('#picklist input').forEach(i=>{pick.sel.add(i.dataset.id);i.checked=true});$('#spl-count').textContent=pick.sel.size+' dipilih'}
 });
 Object.assign(BIND,{
   pick(t){t.checked?pick.sel.add(t.dataset.id):pick.sel.delete(t.dataset.id);$('#spl-count').textContent=pick.sel.size+' dipilih'},
   spldept(){$('#picklist').innerHTML=pickList()},
+  splfrom(t){ui.sf=t.value;ui.page=0;refresh()},
+  splto(t){ui.st=t.value;ui.page=0;refresh()},
+  splsort(t){ui.ss=t.value;ui.page=0;refresh()},
   splq(t){pick.q=t.value;$('#picklist').innerHTML=pickList()}
 });
 window.addEventListener('hashchange',()=>{ui.page=0;ui.cx=null;render()});

@@ -35,28 +35,36 @@ V.pengaturan=()=>{
     <div class="tools"><button class="btn" data-act="dlbackup">Unduh cadangan</button><button class="btn" data-act="copybackup">Salin cadangan</button><label class="btn" for="restore">Pulihkan dari file</label><input type="file" id="restore" accept=".json,.txt" hidden></div>
     <p class="sub">Data tersimpan di browser ini saja. Simpan cadangan secara berkala, terutama sebelum membersihkan browser atau pindah komputer. Jika unduhan tidak berjalan, gunakan Salin cadangan lalu tempel ke file teks.</p>
     <textarea id="restoretxt" rows="3" placeholder="Atau tempel isi cadangan di sini"></textarea><div><button class="btn" data-act="restoretxt">Pulihkan dari teks</button></div></section>
-    <section class="panel pad" style="display:flex;flex-direction:column;gap:12px"><h2>Data contoh</h2><div class="tools">${(S.demo||!S.emps.length)?`<button class="btn" data-act="demo">${ui.cd?'Klik lagi untuk mengganti dengan data contoh baru':'Muat data contoh (224 karyawan)'}</button>`:''}<button class="btn bad" data-act="wipe">${ui.confirm?'Klik lagi untuk menghapus semua':'Hapus semua data'}</button></div>${(S.demo||!S.emps.length)?'':'<p class="sub">Tombol data contoh disembunyikan karena sudah ada data asli. Pilih Hapus semua data bila ingin memakainya lagi.</p>'}</section>`;
+    <section class="panel pad" style="display:flex;flex-direction:column;gap:12px"><h2>Data contoh</h2><div class="tools">${(S.demo||!S.emps.length)?`<button class="btn" data-act="demo">Muat data contoh (224 karyawan)</button>`:''}<button class="btn bad" data-act="wipe">Hapus semua data</button></div>${(S.demo||!S.emps.length)?'':'<p class="sub">Tombol data contoh disembunyikan karena sudah ada data asli. Pilih Hapus semua data bila ingin memakainya lagi.</p>'}</section>`;
   return tb(head)+body;
 };
 function restore(text){
   try{const j=JSON.parse(text);if(!j||!Array.isArray(j.emps)||typeof j.att!=='object')throw 0;S=migrate(j);save();const l=latest();Object.assign(ui,{day:l,from:l.slice(0,7)+'-01',to:l});render();toast('Data dipulihkan')}
   catch(e){toast('Isi cadangan tidak valid')}
 }
+function doDemo(){S=demo();save();const l=latest();Object.assign(ui,{day:l,from:l.slice(0,7)+'-01',to:l});render();toast('Data contoh dimuat')}
+function dangerModal(k){ui.danger=k;const w=k==='wipe';
+  modal(`<h1>${w?'Hapus semua data?':'Ganti dengan data contoh?'}</h1><p class="sub">${w?'Semua karyawan, absensi, SPL dan pengaturan akan dihapus permanen dari browser ini dan tidak bisa dikembalikan kecuali dari cadangan.':'Seluruh data yang ada sekarang akan diganti dengan data contoh dan tidak bisa dikembalikan kecuali dari cadangan.'}</p>
+  <div><button class="btn" data-act="dlbackup">Unduh cadangan dulu</button></div>
+  <label class="f">Ketik HAPUS untuk melanjutkan<input type="text" id="dz-conf" data-bind="delconf" autocomplete="off"></label>
+  <div class="tools" style="justify-content:flex-end"><button class="btn" data-act="closemodal">Batal</button><button class="btn bad" id="del-go" data-act="dzgo" disabled>${w?'Hapus semua data':'Ganti dengan data contoh'}</button></div>`)}
 Object.assign(ACT,{
   addhol(){const v=$('#holin').value;if(v&&!S.set.holidays.includes(v)){S.set.holidays.push(v);save();render()}},
   delhol(a,e){e.preventDefault();S.set.holidays=S.set.holidays.filter(h=>h!==a.dataset.id);save();render()},
   restoretxt(){restore($('#restoretxt').value)},
-  demo(){if(S.emps.length&&!ui.cd){ui.cd=true;render();return}ui.cd=false;S=demo();save();const l=latest();Object.assign(ui,{day:l,from:l.slice(0,7)+'-01',to:l});render();toast('Data contoh dimuat')},
-  wipe(){if(!ui.confirm){ui.confirm=true;render();return}S=migrate({demo:false,emps:[],att:{},spl:[],set:DEFAULT_SET(),imports:[]});ui.confirm=false;save();render();toast('Semua data dihapus')}
+  demo(){if(S.emps.length){dangerModal('demo');return}doDemo()},
+  wipe(){dangerModal('wipe')},
+  dzgo(){const k=ui.danger;if($('#dz-conf').value.trim()!=='HAPUS')return;layer().innerHTML='';ui.danger=null;if(k==='wipe'){S=migrate({demo:false,emps:[],att:{},spl:[],set:DEFAULT_SET(),imports:[]});save();render();toast('Semua data dihapus')}else doDemo()}
 });
 Object.assign(BIND,{
   shiftf(t){S.set.shifts[+t.dataset.i][t.dataset.k]=t.value;save()},
   shiftrot(t){S.set.shifts[+t.dataset.i].rot=t.checked;save()},
   setn(t){S.set[t.dataset.k]=Math.max(0,+t.value||0);save()},
-  sat(t){S.set.sat=t.checked;save()}
+  sat(t){S.set.sat=t.checked;save()},
+  delconf(t){$('#del-go').disabled=t.value.trim()!=='HAPUS'}
 });
 function subKey(){const h=location.hash.slice(1);ui.setTab=['jam','aturan','libur','data'].includes(h)?h:'jam';return ui.setTab}
-window.addEventListener('hashchange',()=>{ui.confirm=false;ui.cd=false;render()});
+window.addEventListener('hashchange',()=>{render()});
 boot({view:'pengaturan',getSub:subKey,need:NEED,after:()=>{const rf=$('#restore');if(rf)rf.onchange=async()=>{if(rf.files[0])restore(await rf.files[0].text())}}});
 
 </script>
