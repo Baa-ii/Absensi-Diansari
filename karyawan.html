@@ -16,7 +16,7 @@
 <script src="assets/layout.js"></script>
 <script>if(typeof boot==='undefined'||typeof S==='undefined'){document.body.innerHTML='<p style="padding:24px;font:16px system-ui,sans-serif">File aplikasi belum lengkap. Unggah folder assets (style.css, data.js, layout.js) bersama semua halaman ke GitHub.</p>'}</script>
 <script>
-const NEED={data:'1.0',layout:'1.0'};
+const NEED={data:'1.1',layout:'1.1'};
 V.karyawan=()=>tb('Daftar karyawan',`<button class="btn" data-act="goto" data-href="impor-karyawan.html">Impor karyawan</button><button class="btn bad" data-act="delallmodal">Hapus semua</button><button class="btn primary" data-act="newemp">Tambah</button>`,'Atur jadwal, kelompok gaji, tarif lembur dan siapa yang berhak lembur. Centang beberapa orang untuk mengubah sekaligus.')+
   `<section class="panel"><div class="tools" style="padding:12px 14px;border-bottom:1px solid var(--line)"><select data-bind="dept" id="deptsel">${deptOpts(ui.dept)}</select><select data-bind="pay" id="paysel">${payOpts(ui.pay)}</select><input type="text" id="q" data-bind="q" placeholder="Cari nama, ID, jabatan" value="${esc(ui.q)}"><label class="tools" style="gap:8px;font-weight:600"><span class="sw"><input type="checkbox" data-bind="showoff" ${ui.showOff?'checked':''} aria-label="Tampilkan nonaktif"><i></i></span>Tampilkan nonaktif</label></div><div id="list">${LST.karyawan()}</div></section>`;
 const kRows=()=>S.emps.filter(e=>matchQ(e)&&(ui.showOff||!e.off));

@@ -16,7 +16,7 @@
 <script src="assets/layout.js"></script>
 <script>if(typeof boot==='undefined'||typeof S==='undefined'){document.body.innerHTML='<p style="padding:24px;font:16px system-ui,sans-serif">File aplikasi belum lengkap. Unggah folder assets (style.css, data.js, layout.js) bersama semua halaman ke GitHub.</p>'}</script>
 <script>
-const NEED={data:'1.0',layout:'1.0'};
+const NEED={data:'1.1',layout:'1.1'};
 V.rekap=()=>tb('Rekap & tarikan',rangeCtl(),'Pilih rentang tanggal untuk menarik data gaji mingguan, 2 mingguan atau bulanan. Nominal lembur adalah estimasi untuk dicek bagian penggajian.')+
   `<section class="panel"><div class="tools" style="padding:12px 14px;border-bottom:1px solid var(--line)"><select data-bind="pay" id="paysel">${payOpts(ui.pay)}</select><select data-bind="dept" id="deptsel">${deptOpts(ui.dept)}</select><input type="text" id="q" data-bind="q" placeholder="Cari nama, ID, jabatan" value="${esc(ui.q)}"><span style="flex:1"></span><button class="btn" data-act="copyrekap">Salin untuk Excel</button></div><div id="list">${LST.rekap()}</div></section>`;
 LST.rekap=()=>{

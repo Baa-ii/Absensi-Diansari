@@ -17,7 +17,7 @@
 <script src="assets/layout.js"></script>
 <script>if(typeof boot==='undefined'||typeof S==='undefined'){document.body.innerHTML='<p style="padding:24px;font:16px system-ui,sans-serif">File aplikasi belum lengkap. Unggah folder assets (style.css, data.js, layout.js) bersama semua halaman ke GitHub.</p>'}</script>
 <script>
-const NEED={data:'1.0',layout:'1.0'};
+const NEED={data:'1.1',layout:'1.1'};
 const EF=[['id','ID / PIN fingerprint',/pin|\bid\b|nik|badge|no\.?\s*id/i],['name','Nama',/nama|name/i],['dept','Departemen',/dept|departemen|bagian|divisi/i],['pos','Jabatan',/jabatan|posisi|position/i],['sched','Jenis jadwal',/jadwal|schedule/i],['shift','Shift tetap',/shift/i],['pay','Kelompok gaji',/gaji|kelompok|periode|payroll/i],['rate','Tarif lembur',/tarif|rate/i],['ot','Boleh lembur',/lembur|overtime|\bot\b/i],['off','Status',/status|aktif/i]];
 const TEMPLATE='ID/PIN\tNama\tDepartemen\tJabatan\tJenis jadwal\tShift tetap\tKelompok gaji\tTarif lembur\tBoleh lembur\tStatus\n1001\tContoh Satu\tProduksi\tOperator\tBergilir\t\tMingguan\t\tYa\tAktif\n2001\tContoh Dua\tAdmin\tStaf\tTetap\tKantor\tBulanan\t\tTidak\tAktif';
 V['impor-karyawan']=()=>tb('Impor karyawan','<button class="btn" data-act="copytpl">Salin template</button><button class="btn" data-act="dltpl">Unduh template</button>','Unggah daftar karyawan dari Excel atau CSV, atau tempel langsung dari Excel. ID harus sama dengan PIN di mesin fingerprint.')+
