@@ -120,7 +120,7 @@ BIND.splby=t=>{ui.sby=t.value;ui.page=0;refresh()};
 const cOK=()=>typeof Cloud!=='undefined';
 async function checkCloud(){
   if(ui.cc||!cOK())return;ui.cc=1;
-  try{const m=await Cloud.ready();if(m&&m.isAdmin){const p=await Cloud.pending();ui.cloudN=p.length;const b=$('#cloudbtn');if(b)b.textContent='SPL dari kepala'+(ui.cloudN?' ('+ui.cloudN+' baru)':'')}}catch(e){}
+  try{const m=await Cloud.ready();if(m&&m.isAdmin){const p=await Cloud.pending();ui.cloudN=p.length;if(p.length){const r=await pullCloud(p);if(r.n)toast(r.n+' SPL dari kepala masuk otomatis')}const b=$('#cloudbtn');if(b)b.textContent='SPL dari kepala'+(ui.cloudN?' ('+ui.cloudN+' baru)':'')}}catch(e){}
 }
 function cloudModal(){
   modal(`<div class="tb" style="padding:0"><h1>SPL dari kepala produksi</h1><button class="btn" data-act="closemodal">Tutup</button></div><div id="cbox" style="display:flex;flex-direction:column;gap:16px"><div class="empty">Menghubungkan&hellip;</div></div>`);
@@ -155,6 +155,20 @@ document.addEventListener('submit',async e=>{
   try{const m=await Cloud.login(u,p);if(!m.isAdmin){await Cloud.logout();cloudBox('Akun ini bukan admin.');return}ui.cc=0;cloudBox()}
   catch(er){$('#clg').disabled=false;$('#cerr').textContent=er.message}
 });
+async function pullCloud(pend){
+  let n=0,bad=0;
+  for(const d of pend){
+    if(S.spl.some(x=>x.cloudId===d.id))continue;
+    const mo=d.date.slice(0,7);let k=S.spl.filter(s=>s.date.slice(0,7)===mo).length+1,id;
+    do{id=`SPL/${mo.slice(0,4)}/${mo.slice(5)}/${String(k).padStart(3,'0')}`;k++}while(S.spl.some(x=>x.id===id));
+    S.spl.push({id,date:d.date,start:d.start,end:d.end,reason:d.reason,dept:d.dept||'-',emps:d.emps,note:d.note||'',by:d.by||d.byUser||'',cloudId:d.id,at:new Date().toLocaleString('id-ID'),status:'Disetujui'});
+    n++;
+  }
+  save();
+  for(const d of pend){const l=S.spl.find(x=>x.cloudId===d.id);try{await Cloud.markImported(d.id,l?l.id:'')}catch(e){bad++}}
+  ui.cloudN=0;render();
+  return {n,bad};
+}
 Object.assign(ACT,{
   cloud(){cloudModal()},
   async cloudout(){try{await Cloud.logout()}catch(e){}ui.cloudN=0;cloudBox()},
@@ -169,18 +183,8 @@ Object.assign(ACT,{
   },
   async cloudpull(){
     let pend;try{pend=await Cloud.pending()}catch(e){toast(e.message);return}
-    let n=0,bad=0;
-    for(const d of pend){
-      if(S.spl.some(x=>x.cloudId===d.id))continue;
-      const mo=d.date.slice(0,7);let k=S.spl.filter(s=>s.date.slice(0,7)===mo).length+1,id;
-      do{id=`SPL/${mo.slice(0,4)}/${mo.slice(5)}/${String(k).padStart(3,'0')}`;k++}while(S.spl.some(x=>x.id===id));
-      S.spl.push({id,date:d.date,start:d.start,end:d.end,reason:d.reason,dept:d.dept||'-',emps:d.emps,note:d.note||'',by:d.by||d.byUser||'',cloudId:d.id,at:new Date().toLocaleString('id-ID'),status:'Disetujui'});
-      n++;
-    }
-    save();
-    for(const d of pend){const l=S.spl.find(x=>x.cloudId===d.id);try{await Cloud.markImported(d.id,l?l.id:'')}catch(e){bad++}}
-    ui.cloudN=0;ui.splTab='Semua';render();
-    cloudModal();setTimeout(()=>{cloudBox(n+' SPL masuk ke absensi'+(bad?'. '+bad+' belum ditandai di cloud, tarik lagi nanti.':'.'))},0);
+    const r=await pullCloud(pend);
+    cloudModal();setTimeout(()=>{cloudBox(r.n+' SPL masuk ke absensi'+(r.bad?'. '+r.bad+' belum ditandai di cloud, tarik lagi nanti.':'.'))},0);
   }
 });
 
