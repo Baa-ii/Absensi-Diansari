@@ -15,23 +15,25 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="assets/data.js"></script>
 <script src="assets/layout.js"></script>
+<script src="assets/firebase-config.js"></script>
+<script src="assets/cloud.js"></script>
 <script>if(typeof boot==='undefined'||typeof S==='undefined'){document.body.innerHTML='<p style="padding:24px;font:16px system-ui,sans-serif">File aplikasi belum lengkap. Unggah folder assets (style.css, data.js, layout.js) bersama semua halaman ke GitHub.</p>'}</script>
 <script>
 const NEED={data:'1.1',layout:'1.1'};
 
 V.lembur=()=>{
   const tab=ui.splTab;
-  return tb(tab==='Dibatalkan'?'SPL dibatalkan':'Semua SPL',`<button class="btn" data-act="xlspl">Tarik ke Excel</button><button class="btn primary" data-act="newspl">Buat SPL</button>`,'SPL yang dibuat langsung berlaku. Lembur dibayar untuk karyawan berhak, sebesar yang lebih kecil antara jam SPL dan jam nyata.')+`<section class="panel"><div class="tools" style="padding:12px 14px;border-bottom:1px solid var(--line)"><span class="muted">Tanggal shift</span><input type="date" data-bind="splfrom" value="${ui.sf||''}" aria-label="Dari tanggal"><span class="muted">sampai</span><input type="date" data-bind="splto" value="${ui.st||''}" aria-label="Sampai tanggal"><select data-bind="splsort" aria-label="Urutan"><option value="new" ${ui.ss!=='old'?'selected':''}>Terbaru dulu</option><option value="old" ${ui.ss==='old'?'selected':''}>Terlama dulu</option></select><button class="btn" data-act="splreset">Reset filter</button></div><div id="list">${LST.lembur()}</div></section>`;
+  return tb(tab==='Dibatalkan'?'SPL dibatalkan':'Semua SPL',`<button class="btn" data-act="cloud" id="cloudbtn">SPL dari kepala${ui.cloudN?` (${ui.cloudN} baru)`:''}</button><button class="btn" data-act="xlspl">Tarik ke Excel</button><button class="btn primary" data-act="newspl">Buat SPL</button>`,'SPL yang dibuat langsung berlaku. Lembur dibayar untuk karyawan berhak, sebesar yang lebih kecil antara jam SPL dan jam nyata.')+`<section class="panel"><div class="tools" style="padding:12px 14px;border-bottom:1px solid var(--line)"><span class="muted">Tanggal shift</span><input type="date" data-bind="splfrom" value="${ui.sf||''}" aria-label="Dari tanggal"><span class="muted">sampai</span><input type="date" data-bind="splto" value="${ui.st||''}" aria-label="Sampai tanggal"><select data-bind="splsort" aria-label="Urutan"><option value="new" ${ui.ss!=='old'?'selected':''}>Terbaru dulu</option><option value="old" ${ui.ss==='old'?'selected':''}>Terlama dulu</option></select>${byOpts()}<button class="btn" data-act="splreset">Reset filter</button></div><div id="list">${LST.lembur()}</div></section>`;
 };
 const SPS=10;
-const splRows=()=>{const f=ui.sf||'',t=ui.st||'',asc=ui.ss==='old';return S.spl.filter(s=>(ui.splTab==='Semua'||s.status===ui.splTab)&&(!f||s.date>=f)&&(!t||s.date<=t)).sort((a,b)=>(a.date===b.date?(a.id<b.id?1:-1)*(asc?-1:1):(a.date<b.date?1:-1)*(asc?-1:1)))};
+const splRows=()=>{const f=ui.sf||'',t=ui.st||'',asc=ui.ss==='old';return S.spl.filter(s=>(ui.splTab==='Semua'||s.status===ui.splTab)&&(!f||s.date>=f)&&(!t||s.date<=t)&&(!ui.sby||(s.by||'')===ui.sby)).sort((a,b)=>(a.date===b.date?(a.id<b.id?1:-1)*(asc?-1:1):(a.date<b.date?1:-1)*(asc?-1:1)))};
 function spager(total){const pages=Math.max(1,Math.ceil(total/SPS));if(ui.page>=pages)ui.page=pages-1;if(ui.page<0)ui.page=0;
   return `<div class="pager"><span>${total?ui.page*SPS+1:0}\u2013${Math.min(total,(ui.page+1)*SPS)} dari ${total} SPL</span><span class="tools"><button class="btn sm" data-act="prev" ${ui.page<=0?'disabled':''}>Sebelumnya</button><button class="btn sm" data-act="next" ${ui.page>=pages-1?'disabled':''}>Berikutnya</button></span></div>`}
 const counted=s=>ui.splTab==='Dibatalkan'||s.status==='Disetujui';
 LST.lembur=()=>{
   const EM=EMap(),rows=splRows(),tot=rows.filter(counted).reduce((a,s)=>a+splCost(s,EM),0),sl=(spager(rows.length),rows.slice(ui.page*SPS,(ui.page+1)*SPS));
   return `<div class="scroll"><table><thead><tr><th>Nomor</th><th>Tanggal shift</th><th>Jam</th><th>Departemen</th><th class="n">Orang</th><th class="n">Biaya maks.</th><th>Pekerjaan</th><th>Status</th><th></th></tr></thead><tbody>
-  ${sl.map(s=>`<tr><td class="mono">${esc(s.id)}${s.ed?` <span class="pill" title="Diubah ${esc(s.ed)}">diubah</span>`:''}</td><td>${fmtDate(s.date)}</td><td class="n">${s.start}\u2013${s.end}</td><td>${esc(s.dept||'\u2014')}</td><td class="n">${s.emps.length}</td><td class="n">${rp(splCost(s,EM))}</td><td>${esc(s.reason)}${s.note?`<br><span class="muted">${esc(s.note)}</span>`:''}</td>
+  ${sl.map(s=>`<tr><td class="mono">${esc(s.id)}${s.ed?` <span class="pill" title="Diubah ${esc(s.ed)}">diubah</span>`:''}${s.by?`<br><span class="muted" style="font-family:var(--ui)">oleh ${esc(s.by)}</span>`:''}</td><td>${fmtDate(s.date)}</td><td class="n">${s.start}\u2013${s.end}</td><td>${esc(s.dept||'\u2014')}</td><td class="n">${s.emps.length}</td><td class="n">${rp(splCost(s,EM))}</td><td>${esc(s.reason)}${s.note?`<br><span class="muted">${esc(s.note)}</span>`:''}</td>
     <td><span class="pill ${s.status==='Disetujui'?'good':s.status==='Dibatalkan'?'bad':'warn'}">${s.status}</span></td>
     <td><span class="tools" style="flex-wrap:nowrap">${s.status==='Disetujui'?`<button class="btn sm" data-act="editspl" data-id="${esc(s.id)}">Edit</button><button class="btn sm bad" data-act="cancelspl" data-id="${esc(s.id)}">${ui.cx===s.id?'Yakin batalkan?':'Batalkan'}</button>`:`<button class="btn sm" data-act="restorespl" data-id="${esc(s.id)}">Aktifkan lagi</button>`}<button class="btn sm" data-act="viewspl" data-id="${esc(s.id)}">Lihat</button></span></td></tr>`).join('')||'<tr><td colspan="9" class="empty">Belum ada SPL di bagian ini.</td></tr>'}</tbody>
   ${rows.length?`<tfoot><tr><td colspan="5"><b>Total ${ui.splTab==='Dibatalkan'?'SPL dibatalkan':'SPL aktif'}</b> <span class="muted">(semua halaman sesuai filter)</span></td><td class="n"><b>${rp(tot)}</b></td><td colspan="3"></td></tr></tfoot>`:''}</table></div>${spager(rows.length)}`;
@@ -39,8 +41,8 @@ LST.lembur=()=>{
 function numFmt(ws,cols){const r=XLSX.utils.decode_range(ws['!ref']);for(let R=1;R<=r.e.r;R++)cols.forEach(C=>{const c=ws[XLSX.utils.encode_cell({r:R,c:C})];if(c&&c.t==='n')c.z='#,##0'})}
 function xlSPL(){
   const EM=EMap(),rows=splRows(),cnt=rows.filter(counted),lab=ui.splTab==='Dibatalkan'?'TOTAL SPL DIBATALKAN':'TOTAL SPL AKTIF';
-  const A=[['Nomor SPL','Tanggal shift','Mulai','Selesai','Durasi (jam)','Departemen','Jumlah orang','Biaya maks. (Rp)','Pekerjaan','Keterangan','Status']];
-  rows.forEach(s=>A.push([s.id,s.date,s.start,s.end,dur(s)/60,s.dept||'',s.emps.length,Math.round(splCost(s,EM)),s.reason,s.note||'',s.status]));
+  const A=[['Nomor SPL','Tanggal shift','Mulai','Selesai','Durasi (jam)','Departemen','Jumlah orang','Biaya maks. (Rp)','Pekerjaan','Keterangan','Status','Dibuat oleh']];
+  rows.forEach(s=>A.push([s.id,s.date,s.start,s.end,dur(s)/60,s.dept||'',s.emps.length,Math.round(splCost(s,EM)),s.reason,s.note||'',s.status,s.by||'']));
   A.push([]);A.push([lab,'','','',cnt.reduce((a,s)=>a+dur(s)/60,0),'',cnt.reduce((a,s)=>a+s.emps.length,0),Math.round(cnt.reduce((a,s)=>a+splCost(s,EM),0))]);
   const B=[['Nomor SPL','Tanggal shift','Jam','ID','Nama','Departemen','Tarif/jam (Rp)','Jam SPL','Nominal maks. (Rp)','Status']];
   let tj=0,tn=0;
@@ -52,7 +54,7 @@ ACT.xlspl=()=>{
   const {A,B}=xlSPL();
   if(!window.XLSX){copyText(A.map(r=>r.join('\t')).join('\n'),'Tersalin, tempel di Excel');return}
   const w1=XLSX.utils.aoa_to_sheet(A),w2=XLSX.utils.aoa_to_sheet(B);
-  w1['!cols']=[{wch:18},{wch:12},{wch:7},{wch:8},{wch:12},{wch:16},{wch:13},{wch:16},{wch:34},{wch:26},{wch:12}];
+  w1['!cols']=[{wch:18},{wch:12},{wch:7},{wch:8},{wch:12},{wch:16},{wch:13},{wch:16},{wch:34},{wch:26},{wch:12},{wch:16}];
   w2['!cols']=[{wch:18},{wch:12},{wch:12},{wch:8},{wch:24},{wch:16},{wch:14},{wch:9},{wch:18},{wch:12}];
   numFmt(w1,[7]);numFmt(w2,[6,8]);
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,w1,'Ringkasan SPL');XLSX.utils.book_append_sheet(wb,w2,'Rincian karyawan');
@@ -97,7 +99,7 @@ Object.assign(ACT,{
   editspl(a){newSplModal(a.dataset.id)},
   cancelspl(a){const id=a.dataset.id;if(ui.cx!==id){ui.cx=id;refresh();return}ui.cx=null;S.spl.find(x=>x.id===id).status='Dibatalkan';save();render();toast('SPL dibatalkan')},
   restorespl(a){S.spl.find(x=>x.id===a.dataset.id).status='Disetujui';save();render();toast('SPL diaktifkan lagi')},
-  splreset(){ui.sf='';ui.st='';ui.ss='new';ui.page=0;render()},
+  splreset(){ui.sf='';ui.st='';ui.sby='';ui.ss='new';ui.page=0;render()},
   newspl(){newSplModal()},savespl(){saveSpl()},
   pickall(){document.querySelectorAll('#picklist input').forEach(i=>{pick.sel.add(i.dataset.id);i.checked=true});$('#spl-count').textContent=pick.sel.size+' dipilih'}
 });
@@ -110,7 +112,79 @@ Object.assign(BIND,{
   splq(t){pick.q=t.value;$('#picklist').innerHTML=pickList()}
 });
 window.addEventListener('hashchange',()=>{ui.page=0;ui.cx=null;render()});
-boot({view:'lembur',getSub:subKey,need:NEED});
+
+/* ---------- SPL dari kepala produksi (Firebase) ---------- */
+ui.cloudN=0;
+const byOpts=()=>{const n=[...new Set(S.spl.map(s=>s.by).filter(Boolean))].sort();return n.length?`<select data-bind="splby" aria-label="Pembuat"><option value="">Semua pembuat</option>${n.map(x=>`<option ${x===ui.sby?'selected':''}>${esc(x)}</option>`).join('')}</select>`:''};
+BIND.splby=t=>{ui.sby=t.value;ui.page=0;refresh()};
+const cOK=()=>typeof Cloud!=='undefined';
+async function checkCloud(){
+  if(ui.cc||!cOK())return;ui.cc=1;
+  try{const m=await Cloud.ready();if(m&&m.isAdmin){const p=await Cloud.pending();ui.cloudN=p.length;const b=$('#cloudbtn');if(b)b.textContent='SPL dari kepala'+(ui.cloudN?' ('+ui.cloudN+' baru)':'')}}catch(e){}
+}
+function cloudModal(){
+  modal(`<div class="tb" style="padding:0"><h1>SPL dari kepala produksi</h1><button class="btn" data-act="closemodal">Tutup</button></div><div id="cbox" style="display:flex;flex-direction:column;gap:16px"><div class="empty">Menghubungkan&hellip;</div></div>`);
+  cloudBox();
+}
+async function cloudBox(msg){
+  const box=$('#cbox');if(!box)return;
+  if(!cOK()){box.innerHTML='<div style="color:var(--bad)">Fitur ini hanya jalan di situs GitHub (butuh file assets/cloud.js dan koneksi internet).</div>';return}
+  let m;try{m=await Cloud.ready()}catch(e){box.innerHTML=`<div style="color:var(--bad)">Tidak bisa terhubung. ${esc(e.message)}</div>`;return}
+  if(!m||!m.isAdmin){
+    box.innerHTML=`<form id="clf" style="display:flex;flex-direction:column;gap:12px"><p class="sub">Masuk sebagai admin untuk menarik SPL dari kepala produksi.</p>
+    <label class="f">Nama pengguna<input type="text" id="cu" value="${esc(window.FB_ADMIN||'admin')}" autocomplete="username" autocapitalize="none"></label>
+    <label class="f">Sandi<input type="password" id="cp" autocomplete="current-password"></label>
+    <div id="cerr" style="color:var(--bad)">${esc(msg||(m?'Akun ini bukan admin.':''))}</div><div><button class="btn primary" type="submit" id="clg">Masuk</button></div></form>`;return}
+  box.innerHTML='<div class="empty">Memuat&hellip;</div>';
+  let pend=[],ak={users:[],names:{}};
+  try{const r=await Promise.all([Cloud.pending(),Cloud.getAkses()]);pend=r[0];ak=r[1]||ak}catch(e){box.innerHTML=`<div style="color:var(--bad)">${esc(e.message)}</div>`;return}
+  ui.cloudN=pend.length;const b=$('#cloudbtn');if(b)b.textContent='SPL dari kepala'+(pend.length?' ('+pend.length+' baru)':'');
+  const act=S.emps.filter(e=>!e.off).length;
+  const lines=(ak.users||[]).map(u=>u+((ak.names||{})[u]?' = '+ak.names[u]:'')).join('\n');
+  box.innerHTML=`<div class="tools" style="justify-content:space-between"><span class="muted">Masuk sebagai ${esc(m.username)}</span><button class="btn sm" data-act="cloudout">Keluar</button></div>
+  ${msg?`<div class="banner">${esc(msg)}</div>`:''}
+  <section class="panel pad" style="display:flex;flex-direction:column;gap:10px"><h2>1. SPL baru dari kepala</h2><p class="sub">${pend.length?pend.length+' SPL menunggu ditarik ke absensi.':'Tidak ada SPL baru.'}</p><div><button class="btn primary" data-act="cloudpull" ${pend.length?'':'disabled'}>Tarik ${pend.length||''} SPL ke absensi</button></div></section>
+  <section class="panel pad" style="display:flex;flex-direction:column;gap:10px"><h2>2. Daftar karyawan untuk pilihan kepala</h2><p class="sub">Kepala memilih karyawan dari daftar ini. Kirim ulang setiap ada karyawan baru atau perubahan departemen. Yang dikirim hanya ID, nama, departemen dan jabatan karyawan aktif.</p><div><button class="btn" data-act="cloudemps">Kirim ${act} karyawan aktif</button></div></section>
+  <section class="panel pad" style="display:flex;flex-direction:column;gap:10px"><h2>3. Pengguna kepala yang diizinkan</h2><p class="sub">Satu baris satu orang: <b>namapengguna = Nama Lengkap</b>. Akunnya juga harus dibuat di Firebase (Authentication, Users) dengan email namapengguna@${esc(window.FB_DOMAIN||'absensi.local')}.</p>
+  <textarea id="cak" rows="5" placeholder="budi = Budi Santoso&#10;andi = Andi Wijaya">${esc(lines)}</textarea><div><button class="btn" data-act="cloudakses">Simpan pengguna</button></div></section>`;
+}
+document.addEventListener('submit',async e=>{
+  if(e.target.id!=='clf')return;e.preventDefault();
+  const u=$('#cu').value.trim(),p=$('#cp').value;if(!u||!p){$('#cerr').textContent='Isi nama pengguna dan sandi.';return}
+  $('#clg').disabled=true;
+  try{const m=await Cloud.login(u,p);if(!m.isAdmin){await Cloud.logout();cloudBox('Akun ini bukan admin.');return}ui.cc=0;cloudBox()}
+  catch(er){$('#clg').disabled=false;$('#cerr').textContent=er.message}
+});
+Object.assign(ACT,{
+  cloud(){cloudModal()},
+  async cloudout(){try{await Cloud.logout()}catch(e){}ui.cloudN=0;cloudBox()},
+  async cloudemps(){
+    try{await Cloud.pushEmployees(S.emps.filter(e=>!e.off).map(e=>({id:e.id,name:e.name,dept:e.dept||'',pos:e.pos||''})));toast('Daftar karyawan terkirim')}
+    catch(e){toast(e.message)}
+  },
+  async cloudakses(){
+    const users=[],names={};
+    ($('#cak').value||'').split(/\r?\n/).forEach(l=>{const i=l.indexOf('=');const u=(i<0?l:l.slice(0,i)).trim().toLowerCase().replace(/\s+/g,'');if(!u)return;users.push(u);if(i>=0&&l.slice(i+1).trim())names[u]=l.slice(i+1).trim()});
+    try{await Cloud.setAkses([...new Set(users)],names);toast('Pengguna tersimpan')}catch(e){toast(e.message)}
+  },
+  async cloudpull(){
+    let pend;try{pend=await Cloud.pending()}catch(e){toast(e.message);return}
+    let n=0,bad=0;
+    for(const d of pend){
+      if(S.spl.some(x=>x.cloudId===d.id))continue;
+      const mo=d.date.slice(0,7);let k=S.spl.filter(s=>s.date.slice(0,7)===mo).length+1,id;
+      do{id=`SPL/${mo.slice(0,4)}/${mo.slice(5)}/${String(k).padStart(3,'0')}`;k++}while(S.spl.some(x=>x.id===id));
+      S.spl.push({id,date:d.date,start:d.start,end:d.end,reason:d.reason,dept:d.dept||'-',emps:d.emps,note:d.note||'',by:d.by||d.byUser||'',cloudId:d.id,at:new Date().toLocaleString('id-ID'),status:'Disetujui'});
+      n++;
+    }
+    save();
+    for(const d of pend){const l=S.spl.find(x=>x.cloudId===d.id);try{await Cloud.markImported(d.id,l?l.id:'')}catch(e){bad++}}
+    ui.cloudN=0;ui.splTab='Semua';render();
+    cloudModal();setTimeout(()=>{cloudBox(n+' SPL masuk ke absensi'+(bad?'. '+bad+' belum ditandai di cloud, tarik lagi nanti.':'.'))},0);
+  }
+});
+
+boot({view:'lembur',getSub:subKey,need:NEED,after:checkCloud});
 
 </script>
 </body>
