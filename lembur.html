@@ -41,8 +41,8 @@ LST.lembur=()=>{
 function numFmt(ws,cols){const r=XLSX.utils.decode_range(ws['!ref']);for(let R=1;R<=r.e.r;R++)cols.forEach(C=>{const c=ws[XLSX.utils.encode_cell({r:R,c:C})];if(c&&c.t==='n')c.z='#,##0'})}
 function xlSPL(){
   const EM=EMap(),rows=splRows(),cnt=rows.filter(counted),lab=ui.splTab==='Dibatalkan'?'TOTAL SPL DIBATALKAN':'TOTAL SPL AKTIF';
-  const A=[['Nomor SPL','Tanggal shift','Mulai','Selesai','Durasi (jam)','Departemen','Jumlah orang','Biaya maks. (Rp)','Pekerjaan','Keterangan','Status','Dibuat oleh']];
-  rows.forEach(s=>A.push([s.id,s.date,s.start,s.end,dur(s)/60,s.dept||'',s.emps.length,Math.round(splCost(s,EM)),s.reason,s.note||'',s.status,s.by||'']));
+  const A=[['Nomor SPL','Tanggal shift','Mulai','Selesai','Durasi (jam)','Departemen','Jumlah orang','Biaya maks. (Rp)','Pekerjaan','Keterangan','Status','Dibuat oleh','Karyawan (ID - nama)']];
+  rows.forEach(s=>A.push([s.id,s.date,s.start,s.end,dur(s)/60,s.dept||'',s.emps.length,Math.round(splCost(s,EM)),s.reason,s.note||'',s.status,s.by||'',s.emps.map(id=>id+' - '+((EM.get(id)||{}).name||'(tidak ada di daftar)')).join(', ')]));
   A.push([]);A.push([lab,'','','',cnt.reduce((a,s)=>a+dur(s)/60,0),'',cnt.reduce((a,s)=>a+s.emps.length,0),Math.round(cnt.reduce((a,s)=>a+splCost(s,EM),0))]);
   const B=[['Nomor SPL','Tanggal shift','Jam','ID','Nama','Departemen','Tarif/jam (Rp)','Jam SPL','Nominal maks. (Rp)','Status']];
   let tj=0,tn=0;
@@ -54,7 +54,7 @@ ACT.xlspl=()=>{
   const {A,B}=xlSPL();
   if(!window.XLSX){copyText(A.map(r=>r.join('\t')).join('\n'),'Tersalin, tempel di Excel');return}
   const w1=XLSX.utils.aoa_to_sheet(A),w2=XLSX.utils.aoa_to_sheet(B);
-  w1['!cols']=[{wch:18},{wch:12},{wch:7},{wch:8},{wch:12},{wch:16},{wch:13},{wch:16},{wch:34},{wch:26},{wch:12},{wch:16}];
+  w1['!cols']=[{wch:18},{wch:12},{wch:7},{wch:8},{wch:12},{wch:16},{wch:13},{wch:16},{wch:34},{wch:26},{wch:12},{wch:16},{wch:60}];
   w2['!cols']=[{wch:18},{wch:12},{wch:12},{wch:8},{wch:24},{wch:16},{wch:14},{wch:9},{wch:18},{wch:12}];
   numFmt(w1,[7]);numFmt(w2,[6,8]);
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,w1,'Ringkasan SPL');XLSX.utils.book_append_sheet(wb,w2,'Rincian karyawan');
