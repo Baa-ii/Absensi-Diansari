@@ -72,8 +72,13 @@
       const q=fs.query(fs.collection(db,'spl'),fs.where('imported','==',false));
       const s=await fs.getDocs(q);return s.docs.map(x=>({id:x.id,...x.data()})).sort((a,b)=>(a.atMs||0)-(b.atMs||0))});
   }
+  async function since(ms){
+    return wrap(async()=>{const {fs}=await load();
+      const q=fs.query(fs.collection(db,'spl'),fs.where('atMs','>',ms||0));
+      const r=await fs.getDocs(q);return r.docs.map(x=>({id:x.id,...x.data()})).sort((a,b)=>(a.atMs||0)-(b.atMs||0))});
+  }
   async function markImported(id,localId){
     return wrap(async()=>{const {fs}=await load();await fs.updateDoc(fs.doc(db,'spl',id),{imported:true,localId})});
   }
-  window.Cloud={ready,login,logout,me,employees,pushEmployees,getAkses,setAkses,addSpl,mySpl,pending,markImported,cap};
+  window.Cloud={ready,login,logout,me,employees,pushEmployees,getAkses,setAkses,addSpl,mySpl,pending,since,markImported,cap};
 })();

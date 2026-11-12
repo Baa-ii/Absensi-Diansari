@@ -118,9 +118,11 @@ ui.cloudN=0;
 const byOpts=()=>{const n=[...new Set(S.spl.map(s=>s.by).filter(Boolean))].sort();return n.length?`<select data-bind="splby" aria-label="Pembuat"><option value="">Semua pembuat</option>${n.map(x=>`<option ${x===ui.sby?'selected':''}>${esc(x)}</option>`).join('')}</select>`:''};
 BIND.splby=t=>{ui.sby=t.value;ui.page=0;refresh()};
 const cOK=()=>typeof Cloud!=='undefined';
+const cloudSince=()=>{const t=S.spl.filter(x=>x.cloudId&&x.cloudAt).map(x=>x.cloudAt);return t.length?Math.max(...t)-14*86400000:0};
+async function cloudNew(){const all=await Cloud.since(cloudSince());return all.filter(d=>!S.spl.some(x=>x.cloudId===d.id))}
 async function checkCloud(){
   if(ui.cc||!cOK())return;ui.cc=1;
-  try{const m=await Cloud.ready();if(m&&m.isAdmin){const p=await Cloud.pending();ui.cloudN=p.length;if(p.length){const r=await pullCloud(p);if(r.n)toast(r.n+' SPL dari kepala masuk otomatis')}const b=$('#cloudbtn');if(b)b.textContent='SPL dari kepala'+(ui.cloudN?' ('+ui.cloudN+' baru)':'')}}catch(e){}
+  try{const m=await Cloud.ready();if(m&&m.isAdmin){const p=await cloudNew();ui.cloudN=p.length;if(p.length){const r=await pullCloud(p);if(r.n)toast(r.n+' SPL dari kepala masuk otomatis')}const b=$('#cloudbtn');if(b)b.textContent='SPL dari kepala'+(ui.cloudN?' ('+ui.cloudN+' baru)':'')}}catch(e){}
 }
 function cloudModal(){
   modal(`<div class="tb" style="padding:0"><h1>SPL dari kepala produksi</h1><button class="btn" data-act="closemodal">Tutup</button></div><div id="cbox" style="display:flex;flex-direction:column;gap:16px"><div class="empty">Menghubungkan&hellip;</div></div>`);
@@ -137,7 +139,7 @@ async function cloudBox(msg){
     <div id="cerr" style="color:var(--bad)">${esc(msg||(m?'Akun ini bukan admin.':''))}</div><div><button class="btn primary" type="submit" id="clg">Masuk</button></div></form>`;return}
   box.innerHTML='<div class="empty">Memuat&hellip;</div>';
   let pend=[],ak={users:[],names:{}};
-  try{const r=await Promise.all([Cloud.pending(),Cloud.getAkses()]);pend=r[0];ak=r[1]||ak}catch(e){box.innerHTML=`<div style="color:var(--bad)">${esc(e.message)}</div>`;return}
+  try{const r=await Promise.all([cloudNew(),Cloud.getAkses()]);pend=r[0];ak=r[1]||ak}catch(e){box.innerHTML=`<div style="color:var(--bad)">${esc(e.message)}</div>`;return}
   ui.cloudN=pend.length;const b=$('#cloudbtn');if(b)b.textContent='SPL dari kepala'+(pend.length?' ('+pend.length+' baru)':'');
   const act=S.emps.filter(e=>!e.off).length;
   const lines=(ak.users||[]).map(u=>u+((ak.names||{})[u]?' = '+ak.names[u]:'')).join('\n');
@@ -161,11 +163,11 @@ async function pullCloud(pend){
     if(S.spl.some(x=>x.cloudId===d.id))continue;
     const mo=d.date.slice(0,7);let k=S.spl.filter(s=>s.date.slice(0,7)===mo).length+1,id;
     do{id=`SPL/${mo.slice(0,4)}/${mo.slice(5)}/${String(k).padStart(3,'0')}`;k++}while(S.spl.some(x=>x.id===id));
-    S.spl.push({id,date:d.date,start:d.start,end:d.end,reason:d.reason,dept:d.dept||'-',emps:d.emps,note:d.note||'',by:d.by||d.byUser||'',cloudId:d.id,at:new Date().toLocaleString('id-ID'),status:'Disetujui'});
+    S.spl.push({id,date:d.date,start:d.start,end:d.end,reason:d.reason,dept:d.dept||'-',emps:d.emps,note:d.note||'',by:d.by||d.byUser||'',cloudId:d.id,cloudAt:d.atMs||0,at:new Date().toLocaleString('id-ID'),status:'Disetujui'});
     n++;
   }
   save();
-  for(const d of pend){const l=S.spl.find(x=>x.cloudId===d.id);try{await Cloud.markImported(d.id,l?l.id:'')}catch(e){bad++}}
+  for(const d of pend){if(d.imported)continue;const l=S.spl.find(x=>x.cloudId===d.id);try{await Cloud.markImported(d.id,l?l.id:'')}catch(e){bad++}}
   ui.cloudN=0;render();
   return {n,bad};
 }
@@ -182,7 +184,7 @@ Object.assign(ACT,{
     try{await Cloud.setAkses([...new Set(users)],names);toast('Pengguna tersimpan')}catch(e){toast(e.message)}
   },
   async cloudpull(){
-    let pend;try{pend=await Cloud.pending()}catch(e){toast(e.message);return}
+    let pend;try{pend=await cloudNew()}catch(e){toast(e.message);return}
     const r=await pullCloud(pend);
     cloudModal();setTimeout(()=>{cloudBox(r.n+' SPL masuk ke absensi'+(r.bad?'. '+r.bad+' belum ditandai di cloud, tarik lagi nanti.':'.'))},0);
   }
