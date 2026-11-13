@@ -87,7 +87,7 @@ function render(){
   const bad=PAGE.need?Object.keys(PAGE.need).filter(k=>APPV[k]!==PAGE.need[k]):[];
   $('#main').innerHTML=(bad.length?'<div class="banner bad">File aplikasi tidak cocok ('+bad.join(', ')+'). Unggah ulang seluruh folder assets bersama semua halaman, lalu muat ulang dengan Ctrl+F5.</div>':'')+(S.demo?'<div class="banner">Menampilkan data contoh. Hapus di Pengaturan, Data & cadangan, sebelum memakai data asli.</div>':'')+V[PAGE.view]();
   const d=ui.drawer&&S.emps.find(e=>e.id===ui.drawer);if(d){layer().innerHTML=`<div class="over-ov" data-act="ovclick" style="padding:0;justify-content:flex-end">${drawerHTML(d)}</div>`}
-  $('#ver').textContent='Absensi Karyawan \u00b7 versi '+APPV.data+' \u00b7 data '+APPV.data+' \u00b7 tampilan '+APPV.layout;
+  $('#ver').textContent='© Diansari \u00b7 versi '+APPV.data+' \u00b7 data '+APPV.data+' \u00b7 tampilan '+APPV.layout;
   if(PAGE.after)PAGE.after();
   saveUi();
 }
