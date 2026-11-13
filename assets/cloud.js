@@ -1,8 +1,8 @@
 /* cloud.js — penghubung ke Firebase (login dan SPL bersama). Dimuat lewat internet saat dibutuhkan. */
-(window.APPV=window.APPV||{}).cloud='1.0';
+(window.APPV=window.APPV||{}).cloud='1.1';
 (function(){
   const VER='10.12.2',BASE='https://www.gstatic.com/firebasejs/'+VER+'/';
-  let M=null,auth=null,db=null;
+  let M=null,auth=null,db=null,ADM=false;
   const dom=()=>window.FB_DOMAIN||'absensi.local';
   const mailOf=u=>String(u||'').trim().toLowerCase().replace(/\s+/g,'')+'@'+dom();
   const unameOf=em=>String(em||'').split('@')[0];
@@ -18,7 +18,7 @@
   function me(){
     const u=auth&&auth.currentUser;if(!u)return null;
     const un=unameOf(u.email);
-    return {username:un,email:u.email,isAdmin:un===(window.FB_ADMIN||'admin')};
+    return {username:un,email:u.email,isAdmin:ADM};
   }
   function nice(e){
     const c=(e&&e.code)||'';
@@ -29,17 +29,23 @@
     if(/unauthorized-domain/.test(c))return 'Alamat situs belum diizinkan di Firebase (Authentication, Settings, Authorized domains).';
     return (e&&e.message)||'Terjadi kesalahan.';
   }
+  async function probe(){
+    ADM=false;if(!auth||!auth.currentUser)return;
+    try{const {fs}=await load();await fs.getDoc(fs.doc(db,'d','main'));ADM=true}catch(e){ADM=false}
+  }
   async function ready(){
     const {au}=await load();
     await new Promise(res=>{const off=au.onAuthStateChanged(auth,()=>{off();res()})});
+    await probe();
     return me();
   }
   async function login(user,pass){
     const {au}=await load();
     try{await au.signInWithEmailAndPassword(auth,mailOf(user),pass)}catch(e){throw new Error(nice(e))}
+    await probe();
     return me();
   }
-  async function logout(){const {au}=await load();await au.signOut(auth)}
+  async function logout(){const {au}=await load();ADM=false;await au.signOut(auth)}
   const wrap=async f=>{try{return await f()}catch(e){throw new Error(nice(e))}};
   async function employees(){
     return wrap(async()=>{const {fs}=await load();const s=await fs.getDoc(fs.doc(db,'meta','employees'));
@@ -80,5 +86,34 @@
   async function markImported(id,localId){
     return wrap(async()=>{const {fs}=await load();await fs.updateDoc(fs.doc(db,'spl',id),{imported:true,localId})});
   }
-  window.Cloud={ready,login,logout,me,employees,pushEmployees,getAkses,setAkses,addSpl,mySpl,pending,since,markImported,cap};
+
+  /* ---- data bersama admin: koleksi 'd', tiap dokumen {m:{kunci:nilai}, at:ms} ---- */
+  async function dGet(id){
+    return wrap(async()=>{const {fs}=await load();const s=await fs.getDoc(fs.doc(db,'d',id));return s.exists()?s.data():null});
+  }
+  async function dSince(ms){
+    return wrap(async()=>{const {fs}=await load();
+      const s=await fs.getDocs(fs.query(fs.collection(db,'d'),fs.where('at','>',ms||0)));
+      return s.docs.map(x=>({id:x.id,data:x.data(),pending:x.metadata.hasPendingWrites}))});
+  }
+  async function dListen(ms,cb,err){
+    const {fs}=await load();
+    return fs.onSnapshot(fs.query(fs.collection(db,'d'),fs.where('at','>',ms||0)),sn=>{
+      cb(sn.docChanges().filter(c=>c.type!=='removed').map(c=>({id:c.doc.id,data:c.doc.data(),pending:c.doc.metadata.hasPendingWrites})))
+    },e=>err&&err(new Error(nice(e))));
+  }
+  /* ops: [{id, set:{kunci:nilai}, del:[kunci]}] */
+  async function dCommit(ops){
+    return wrap(async()=>{const {fs}=await load();const now=Date.now();
+      for(let i=0;i<ops.length;i+=200){
+        const b=fs.writeBatch(db);
+        ops.slice(i,i+200).forEach(o=>{const m={};
+          Object.keys(o.set||{}).forEach(k=>{m[k]=o.set[k]});
+          (o.del||[]).forEach(k=>{m[k]=fs.deleteField()});
+          b.set(fs.doc(db,'d',o.id),{m,at:now},{merge:true})});
+        await b.commit();
+      }
+      return now});
+  }
+  window.Cloud={dGet,dSince,dListen,dCommit,ready,login,logout,me,employees,pushEmployees,getAkses,setAkses,addSpl,mySpl,pending,since,markImported,cap};
 })();
