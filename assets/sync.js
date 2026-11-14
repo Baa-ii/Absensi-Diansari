@@ -106,12 +106,12 @@ function rerender(){
 }
 
 /* ---------- tampilan: layar login dan status ---------- */
-function ov(html){
+function ov(html,w){
   let o=document.getElementById('syncov');
   if(!o){o=document.createElement('div');o.id='syncov';
     o.style.cssText='position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px;font-family:var(--ui);color:var(--ink)';
     document.body.appendChild(o)}
-  o.innerHTML='<div style="background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:24px;width:100%;max-width:360px;display:flex;flex-direction:column;gap:14px">'+html+'</div>';
+  o.innerHTML='<div style="background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:24px;width:100%;max-width:'+(w||360)+'px;display:flex;flex-direction:column;gap:14px">'+html+'</div>';
   return o;
 }
 const hideOv=()=>{const o=document.getElementById('syncov');if(o)o.remove()};
@@ -125,7 +125,8 @@ function loginView(cfg,msg){
    <label style="font-size:13px">Sandi<input id="sy_p" type="password" style="${FS}" autocomplete="current-password"></label>
    <div id="sy_e" style="color:var(--bad);font-size:13px;min-height:16px">${E(msg||'')}</div>
    <button id="sy_go" style="${BT}">Masuk</button>
-   <a href="spl" style="font-size:13px;color:var(--accent)">Saya kepala produksi (isi SPL)</a>`);
+   <a href="#" id="sy_bk" style="font-size:13px;color:var(--accent)">← Kembali</a>`);
+  document.getElementById('sy_bk').onclick=e=>{e.preventDefault();portalView(cfg,null)};
   const go=async()=>{
     const u=document.getElementById('sy_u').value,p=document.getElementById('sy_p').value;
     const b=document.getElementById('sy_go');b.disabled=true;b.textContent='Memeriksa…';
@@ -138,6 +139,23 @@ function loginView(cfg,msg){
   document.getElementById('sy_go').onclick=go;
   document.getElementById('sy_p').onkeydown=e=>{if(e.key==='Enter')go()};
   const p=document.getElementById('sy_p');if(p)p.focus();
+}
+
+function portalView(cfg,m){
+  const card=(ic,t,d,id,href)=>`<${href?'a href="'+href+'"':'button'} id="${id}" style="all:unset;box-sizing:border-box;cursor:pointer;flex:1 1 220px;border:1px solid var(--line);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:8px;background:var(--bg)">
+    <span style="width:38px;height:38px;border-radius:10px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:20px">${ic}</span>
+    <span style="font-size:16px;font-weight:700;color:var(--ink)">${t}</span>
+    <span style="font-size:13px;color:var(--muted);line-height:1.45">${d}</span></${href?'a':'button'}>`;
+  const kep=m&&!m.isAdmin;
+  ov(`<div><div style="font-size:20px;font-weight:700">Absensi Karyawan</div>
+    <div style="color:var(--muted);font-size:14px;margin-top:4px">Pilih bagian Anda untuk masuk.</div></div>
+    <div style="display:flex;flex-wrap:wrap;gap:12px">
+    ${card('▦','Admin Absensi','Rekap, impor finger, karyawan, dan lembur. Untuk bagian cek gaji.','pc_a')}
+    ${card('✎',kep?'Lanjut sebagai '+E(Cloud.cap(m.username)):'Kepala Produksi',kep?'Buka halaman isi SPL lembur.':'Isi SPL lembur untuk karyawan.','pc_k','spl.html')}
+    </div>
+    ${kep?'<a href="#" id="pc_sw" style="font-size:13px;color:var(--accent)">Ganti akun</a>':''}`,560);
+  document.getElementById('pc_a').onclick=()=>loginView(cfg);
+  const sw=document.getElementById('pc_sw');if(sw)sw.onclick=async e=>{e.preventDefault();try{await Cloud.logout()}catch(x){}portalView(cfg,null)};
 }
 function failView(cfg,msg){
   ov(`<div style="font-size:18px;font-weight:700">Tidak bisa terhubung</div>
@@ -174,15 +192,7 @@ async function start(cfg){
   ov('<div style="color:var(--muted)">Menghubungkan ke server…</div>');
   let m;
   try{m=await Cloud.ready()}catch(e){return failView(cfg,e.message)}
-  if(!m)return loginView(cfg);
-  if(!m.isAdmin){
-    ov(`<div style="font-size:18px;font-weight:700">Akun ini bukan admin</div>
-      <div style="color:var(--muted);font-size:14px">Akun ${E(m.username)} hanya untuk mengisi SPL.</div>
-      <a href="spl" style="${BT};text-align:center;text-decoration:none">Ke halaman SPL</a>
-      <button id="sy_sw" style="padding:10px 14px;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--ink);font:inherit;cursor:pointer">Ganti akun</button>`);
-    document.getElementById('sy_sw').onclick=async()=>{try{await Cloud.logout()}catch(x){}loginView(cfg)};
-    return;
-  }
+  if(!m||!m.isAdmin)return portalView(cfg,m);
   loadAll(cfg,m);
 }
 async function loadAll(cfg,m){
