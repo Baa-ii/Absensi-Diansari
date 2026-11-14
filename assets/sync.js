@@ -159,7 +159,7 @@ function portalView(cfg,m){
 }
 function loginView(cfg,err){
   scene(`<form class="sy-card sy-col" id="sy_f" autocomplete="on">
-    <input class="sy-in" id="sy_u" name="username" placeholder="Nama pengguna" aria-label="Nama pengguna" autocomplete="username" autocapitalize="none" value="${E(window.FB_ADMIN||'admin')}">
+    <input class="sy-in" id="sy_u" name="username" placeholder="Nama pengguna" aria-label="Nama pengguna" autocomplete="username" autocapitalize="none">
     <input class="sy-in" id="sy_p" name="password" type="password" placeholder="Sandi" aria-label="Sandi" autocomplete="current-password">
     <div class="sy-er" id="sy_e">${E(err||'')}</div>
     <button class="sy-go" id="sy_go" type="submit">Masuk</button>

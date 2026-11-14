@@ -143,7 +143,8 @@ async function send(){
   busy=false;
 }
 (async()=>{
-  try{me=await Cloud.ready()}catch(e){main.innerHTML=`<div class="panel pad" style="color:var(--bad)">Tidak bisa terhubung ke layanan SPL. ${esc(e.message)}</div>`;return}
+  scene('<div class="sy-t">Memuat\u2026</div>');
+  try{me=await Cloud.ready()}catch(e){scene(`<div class="sy-card sy-col"><div class="sy-er" style="display:block">Tidak bisa terhubung ke layanan SPL. ${esc(e.message)}</div><button class="sy-go" type="button" onclick="location.reload()">Coba lagi</button></div>`);return}
   me?home():loginView();
 })();
 </script>
