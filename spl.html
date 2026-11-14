@@ -33,19 +33,65 @@ function setHead(){
 }
 $('#out').onclick=async()=>{try{await Cloud.logout()}catch(e){}me=null;sel=new Set();setHead();loginView()};
 
+const DK='--sy-a:#2fb883;--sy-a2:#5ad1a3;--sy-bg1:#0f1815;--sy-bg2:#0b1311;--sy-ink:#eaf3ef;--sy-mut:#9db0a9;--sy-card:#16211d;--sy-off:#22312c;--sy-offink:#dce8e3;--sy-bl:#16302a;--sy-w1:#1c3a31;--sy-w2:#2a7a5d;--sy-ln:#2a3a35;--sy-in:#101a17;--sy-dot:#24413a';
+function css(){
+  if(document.getElementById('sy-css'))return;
+  const s=document.createElement('style');s.id='sy-css';
+  s.textContent=`:root{--sy-a:#1F9D6B;--sy-a2:#157a53;--sy-bg1:#fbfdfc;--sy-bg2:#eef5f2;--sy-ink:#1b2a3a;--sy-mut:#66726E;--sy-card:#fff;--sy-off:#efefef;--sy-offink:#2b3440;--sy-bl:#dcefe7;--sy-w1:#bfe3d1;--sy-w2:#6cc09b;--sy-ln:#E2E7E4;--sy-in:#f7f9f8;--sy-dot:#c3ddd1}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){${DK}}}
+:root[data-theme="dark"]{${DK}}
+#syncov{position:fixed;inset:0;z-index:9999;background:linear-gradient(160deg,var(--sy-bg1),var(--sy-bg2));display:flex;flex-direction:column;align-items:center;padding:clamp(40px,12vh,110px) 16px 16px;overflow:auto;font-family:var(--ui,system-ui,sans-serif);color:var(--sy-ink)}
+#syncov>*{position:relative}#syncov>svg.sy-bg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.sy-ic{width:46px;height:46px;border-radius:12px;background:var(--sy-a);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(31,157,107,.3)}
+.sy-h{margin:14px 0 4px;font-size:clamp(22px,5vw,28px);font-weight:700;letter-spacing:-.3px;text-align:center}
+.sy-p{margin:0 0 22px;color:var(--sy-mut);font-size:14px;text-align:center}
+.sy-card{background:var(--sy-card);border-radius:14px;box-shadow:0 10px 32px rgba(20,60,45,.14);padding:12px;display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.sy-col{flex-direction:column;gap:10px;width:min(100%,280px);padding:16px}
+.sy-b{display:flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:9px;padding:12px 28px;font:700 14px/1 inherit;font-family:inherit;cursor:pointer;text-decoration:none;min-width:120px}
+.sy-b.on{background:var(--sy-a);color:#fff}.sy-b.off{background:var(--sy-off);color:var(--sy-offink)}
+.sy-in{width:100%;box-sizing:border-box;border:1px solid var(--sy-ln);border-radius:8px;padding:11px 12px;font:14px inherit;font-family:inherit;color:var(--sy-ink);background:var(--sy-in);outline:none}
+.sy-in:focus{border-color:var(--sy-a)}
+.sy-go{border:0;border-radius:8px;padding:11px;background:var(--sy-a);color:#fff;font:700 14px inherit;font-family:inherit;cursor:pointer}.sy-go:disabled{opacity:.6}
+.sy-lk{font-size:12px;color:var(--sy-a2);text-align:center;cursor:pointer;text-decoration:none;margin-top:12px;display:block}
+.sy-card .sy-lk{margin-top:0}
+.sy-er{color:#B03F2B;font-size:13px;min-height:0;text-align:center}.sy-er:empty{display:none}
+.sy-t{font-size:14px;color:var(--sy-mut);text-align:center;line-height:1.5}`;
+  document.head.appendChild(s);
+}
+const ICON='<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4M9 15l2 2 4-4"/></svg>';
+const USR='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.5 2.7-5.5 6-5.5s6 2 6 5.5"/><circle cx="17" cy="9" r="2.4"/><path d="M17.5 14.5c2.4.2 3.8 1.8 3.8 4.5"/></svg>';
+const FAC='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20V9l6 4V9l6 4V5h3v15zM3 20h18"/></svg>';
+const BGS=(()=>{let d='';for(let r=0;r<4;r++)for(let c=0;c<5;c++)d+=`<circle cx="${28+c*17}" cy="${300+r*17}" r="2.6"/>`;
+  return `<svg class="sy-bg" viewBox="0 0 640 420" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+<circle cx="40" cy="30" r="150" style="fill:var(--sy-bl)" opacity=".6"/>
+<g opacity=".18" fill="none" style="stroke:var(--sy-a)" stroke-width="5"><rect x="520" y="40" width="150" height="150" rx="16"/><path d="M520 80h150M560 28v26M630 28v26"/></g>
+<g opacity=".16" style="fill:var(--sy-a)"><rect x="540" y="96" width="30" height="24" rx="5"/><rect x="590" y="96" width="30" height="24" rx="5"/><rect x="540" y="136" width="30" height="24" rx="5"/><rect x="590" y="136" width="30" height="24" rx="5"/></g>
+<g style="fill:var(--sy-dot)">${d}</g>
+<path d="M300 420C400 340 470 400 640 300V420Z" style="fill:var(--sy-w1)" opacity=".7"/><path d="M380 420C470 370 540 410 640 350V420Z" style="fill:var(--sy-w2)"/></svg>`})();
+function scene(inner){
+  css();let o=document.getElementById('syncov');
+  if(!o){o=document.createElement('div');o.id='syncov';document.body.appendChild(o)}
+  o.innerHTML=BGS+`<div class="sy-ic">${ICON}</div><h1 class="sy-h">Absensi Karyawan</h1><p class="sy-p">PT. Diansari Puri Plastindo</p>`+inner;
+  return o;
+}
+
 function loginView(msg){
   setHead();
-  main.innerHTML=`<section class="panel card"><form id="lf"><div><h1 style="margin:0;font-size:19px">Masuk</h1><p class="sub">Gunakan nama pengguna dan sandi dari admin.</p></div>
-  <label class="f">Nama pengguna<input type="text" id="u" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false"></label>
-  <label class="f">Sandi<input type="password" id="p" autocomplete="current-password"></label>
-  <div class="err" id="e">${esc(msg||'')}</div><button class="btn primary" id="go" type="submit">Masuk</button></form></section>`;
+  scene(`<form class="sy-card sy-col" id="lf" autocomplete="on"><div class="sy-t" style="font-size:13px">SPL Kepala Produksi</div>
+    <input class="sy-in" id="u" name="username" placeholder="Nama pengguna" aria-label="Nama pengguna" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
+    <input class="sy-in" id="p" name="password" type="password" placeholder="Sandi" aria-label="Sandi" autocomplete="current-password">
+    <div class="sy-er" id="e">${esc(msg||'')}</div>
+    <button class="sy-go" id="go" type="submit">Masuk</button>
+    <a class="sy-lk" href="index.html">\u2190 Kembali</a></form>`);
   $('#lf').onsubmit=async ev=>{ev.preventDefault();const u=$('#u').value.trim(),p=$('#p').value;
     if(!u||!p){$('#e').textContent='Isi nama pengguna dan sandi.';return}
     $('#go').disabled=true;$('#e').textContent='';
     try{me=await Cloud.login(u,p);await home()}catch(e){$('#go').disabled=false;$('#e').textContent=e.message}};
+  $('#u').focus();
 }
 
 async function home(){
+  const ov0=document.getElementById('syncov');if(ov0)ov0.remove();
   main.innerHTML='<div class="panel empty">Memuat data&hellip;</div>';
   try{const r=await Promise.all([Cloud.employees(),Cloud.mySpl()]);E=r[0]||{list:[],names:{}};mine=r[1]}
   catch(e){main.innerHTML=`<div class="panel pad" style="color:var(--bad)">${esc(e.message)}</div><div><button class="btn" id="re">Coba lagi</button></div>`;$('#re').onclick=home;return}

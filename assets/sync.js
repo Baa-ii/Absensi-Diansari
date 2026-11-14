@@ -106,62 +106,79 @@ function rerender(){
 }
 
 /* ---------- tampilan: layar login dan status ---------- */
-function ov(html,w){
-  let o=document.getElementById('syncov');
-  if(!o){o=document.createElement('div');o.id='syncov';
-    o.style.cssText='position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px;font-family:var(--ui);color:var(--ink)';
-    document.body.appendChild(o)}
-  o.innerHTML='<div style="background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:24px;width:100%;max-width:'+(w||360)+'px;display:flex;flex-direction:column;gap:14px">'+html+'</div>';
+const E=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const DK='--sy-a:#2fb883;--sy-a2:#5ad1a3;--sy-bg1:#0f1815;--sy-bg2:#0b1311;--sy-ink:#eaf3ef;--sy-mut:#9db0a9;--sy-card:#16211d;--sy-off:#22312c;--sy-offink:#dce8e3;--sy-bl:#16302a;--sy-w1:#1c3a31;--sy-w2:#2a7a5d;--sy-ln:#2a3a35;--sy-in:#101a17;--sy-dot:#24413a';
+function css(){
+  if(document.getElementById('sy-css'))return;
+  const s=document.createElement('style');s.id='sy-css';
+  s.textContent=`:root{--sy-a:#1F9D6B;--sy-a2:#157a53;--sy-bg1:#fbfdfc;--sy-bg2:#eef5f2;--sy-ink:#1b2a3a;--sy-mut:#66726E;--sy-card:#fff;--sy-off:#efefef;--sy-offink:#2b3440;--sy-bl:#dcefe7;--sy-w1:#bfe3d1;--sy-w2:#6cc09b;--sy-ln:#E2E7E4;--sy-in:#f7f9f8;--sy-dot:#c3ddd1}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){${DK}}}
+:root[data-theme="dark"]{${DK}}
+#syncov{position:fixed;inset:0;z-index:9999;background:linear-gradient(160deg,var(--sy-bg1),var(--sy-bg2));display:flex;flex-direction:column;align-items:center;padding:clamp(40px,12vh,110px) 16px 16px;overflow:auto;font-family:var(--ui,system-ui,sans-serif);color:var(--sy-ink)}
+#syncov>*{position:relative}#syncov>svg.sy-bg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.sy-ic{width:46px;height:46px;border-radius:12px;background:var(--sy-a);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(31,157,107,.3)}
+.sy-h{margin:14px 0 4px;font-size:clamp(22px,5vw,28px);font-weight:700;letter-spacing:-.3px;text-align:center}
+.sy-p{margin:0 0 22px;color:var(--sy-mut);font-size:14px;text-align:center}
+.sy-card{background:var(--sy-card);border-radius:14px;box-shadow:0 10px 32px rgba(20,60,45,.14);padding:12px;display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.sy-col{flex-direction:column;gap:10px;width:min(100%,280px);padding:16px}
+.sy-b{display:flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:9px;padding:12px 28px;font:700 14px/1 inherit;font-family:inherit;cursor:pointer;text-decoration:none;min-width:120px}
+.sy-b.on{background:var(--sy-a);color:#fff}.sy-b.off{background:var(--sy-off);color:var(--sy-offink)}
+.sy-in{width:100%;box-sizing:border-box;border:1px solid var(--sy-ln);border-radius:8px;padding:11px 12px;font:14px inherit;font-family:inherit;color:var(--sy-ink);background:var(--sy-in);outline:none}
+.sy-in:focus{border-color:var(--sy-a)}
+.sy-go{border:0;border-radius:8px;padding:11px;background:var(--sy-a);color:#fff;font:700 14px inherit;font-family:inherit;cursor:pointer}.sy-go:disabled{opacity:.6}
+.sy-lk{font-size:12px;color:var(--sy-a2);text-align:center;cursor:pointer;text-decoration:none;margin-top:12px;display:block}
+.sy-card .sy-lk{margin-top:0}
+.sy-er{color:#B03F2B;font-size:13px;min-height:0;text-align:center}.sy-er:empty{display:none}
+.sy-t{font-size:14px;color:var(--sy-mut);text-align:center;line-height:1.5}`;
+  document.head.appendChild(s);
+}
+const ICON='<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4M9 15l2 2 4-4"/></svg>';
+const USR='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.5 2.7-5.5 6-5.5s6 2 6 5.5"/><circle cx="17" cy="9" r="2.4"/><path d="M17.5 14.5c2.4.2 3.8 1.8 3.8 4.5"/></svg>';
+const FAC='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20V9l6 4V9l6 4V5h3v15zM3 20h18"/></svg>';
+const BGS=(()=>{let d='';for(let r=0;r<4;r++)for(let c=0;c<5;c++)d+=`<circle cx="${28+c*17}" cy="${300+r*17}" r="2.6"/>`;
+  return `<svg class="sy-bg" viewBox="0 0 640 420" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+<circle cx="40" cy="30" r="150" style="fill:var(--sy-bl)" opacity=".6"/>
+<g opacity=".18" fill="none" style="stroke:var(--sy-a)" stroke-width="5"><rect x="520" y="40" width="150" height="150" rx="16"/><path d="M520 80h150M560 28v26M630 28v26"/></g>
+<g opacity=".16" style="fill:var(--sy-a)"><rect x="540" y="96" width="30" height="24" rx="5"/><rect x="590" y="96" width="30" height="24" rx="5"/><rect x="540" y="136" width="30" height="24" rx="5"/><rect x="590" y="136" width="30" height="24" rx="5"/></g>
+<g style="fill:var(--sy-dot)">${d}</g>
+<path d="M300 420C400 340 470 400 640 300V420Z" style="fill:var(--sy-w1)" opacity=".7"/><path d="M380 420C470 370 540 410 640 350V420Z" style="fill:var(--sy-w2)"/></svg>`})();
+function scene(inner){
+  css();let o=document.getElementById('syncov');
+  if(!o){o=document.createElement('div');o.id='syncov';document.body.appendChild(o)}
+  o.innerHTML=BGS+`<div class="sy-ic">${ICON}</div><h1 class="sy-h">Absensi Karyawan</h1><p class="sy-p">PT. Diansari Puri Plastindo</p>`+inner;
   return o;
 }
+const msg=t=>scene(`<div class="sy-t">${E(t)}</div>`);
 const hideOv=()=>{const o=document.getElementById('syncov');if(o)o.remove()};
-const E=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const FS='width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;margin-top:4px';
-const BT='padding:10px 14px;border:0;border-radius:8px;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:600;cursor:pointer';
-function loginView(cfg,msg){
-  ov(`<div style="font-size:18px;font-weight:700">Masuk admin</div>
-   <div style="color:var(--muted);font-size:14px">Data absensi disimpan di server dan sama di semua komputer. Masuk dulu untuk membukanya.</div>
-   <label style="font-size:13px">Nama pengguna<input id="sy_u" style="${FS}" value="${E(window.FB_ADMIN||'admin')}" autocomplete="username" autocapitalize="none"></label>
-   <label style="font-size:13px">Sandi<input id="sy_p" type="password" style="${FS}" autocomplete="current-password"></label>
-   <div id="sy_e" style="color:var(--bad);font-size:13px;min-height:16px">${E(msg||'')}</div>
-   <button id="sy_go" style="${BT}">Masuk</button>
-   <a href="#" id="sy_bk" style="font-size:13px;color:var(--accent)">← Kembali</a>`);
-  document.getElementById('sy_bk').onclick=e=>{e.preventDefault();portalView(cfg,null)};
-  const go=async()=>{
-    const u=document.getElementById('sy_u').value,p=document.getElementById('sy_p').value;
-    const b=document.getElementById('sy_go');b.disabled=true;b.textContent='Memeriksa…';
-    try{
-      const m=await Cloud.login(u,p);
-      if(!m.isAdmin){await Cloud.logout();return loginView(cfg,'Akun ini bukan admin.')}
-      loadAll(cfg,m);
-    }catch(e){loginView(cfg,e.message)}
-  };
-  document.getElementById('sy_go').onclick=go;
-  document.getElementById('sy_p').onkeydown=e=>{if(e.key==='Enter')go()};
-  const p=document.getElementById('sy_p');if(p)p.focus();
-}
-
 function portalView(cfg,m){
-  const card=(ic,t,d,id,href)=>`<${href?'a href="'+href+'"':'button'} id="${id}" style="all:unset;box-sizing:border-box;cursor:pointer;flex:1 1 220px;border:1px solid var(--line);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:8px;background:var(--bg)">
-    <span style="width:38px;height:38px;border-radius:10px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:20px">${ic}</span>
-    <span style="font-size:16px;font-weight:700;color:var(--ink)">${t}</span>
-    <span style="font-size:13px;color:var(--muted);line-height:1.45">${d}</span></${href?'a':'button'}>`;
   const kep=m&&!m.isAdmin;
-  ov(`<div><div style="font-size:20px;font-weight:700">Absensi Karyawan</div>
-    <div style="color:var(--muted);font-size:14px;margin-top:4px">Pilih bagian Anda untuk masuk.</div></div>
-    <div style="display:flex;flex-wrap:wrap;gap:12px">
-    ${card('▦','Admin Absensi','Rekap, impor finger, karyawan, dan lembur. Untuk bagian cek gaji.','pc_a')}
-    ${card('✎',kep?'Lanjut sebagai '+E(Cloud.cap(m.username)):'Kepala Produksi',kep?'Buka halaman isi SPL lembur.':'Isi SPL lembur untuk karyawan.','pc_k','spl.html')}
-    </div>
-    ${kep?'<a href="#" id="pc_sw" style="font-size:13px;color:var(--accent)">Ganti akun</a>':''}`,560);
+  scene(`<div class="sy-card"><button class="sy-b on" id="pc_a" type="button">${USR}Admin</button><a class="sy-b off" id="pc_k" href="spl.html">${FAC}SPL</a></div>`
+    +(kep?`<a class="sy-lk" id="pc_sw" href="#">Masuk sebagai ${E(Cloud.cap(m.username))} · Ganti akun</a>`:''));
   document.getElementById('pc_a').onclick=()=>loginView(cfg);
   const sw=document.getElementById('pc_sw');if(sw)sw.onclick=async e=>{e.preventDefault();try{await Cloud.logout()}catch(x){}portalView(cfg,null)};
 }
-function failView(cfg,msg){
-  ov(`<div style="font-size:18px;font-weight:700">Tidak bisa terhubung</div>
-   <div style="color:var(--bad);font-size:14px">${E(msg)}</div>
-   <div style="color:var(--muted);font-size:13px">Periksa koneksi internet, lalu coba lagi. Data tidak diubah.</div>
-   <button id="sy_re" style="${BT}">Coba lagi</button>`);
+function loginView(cfg,err){
+  scene(`<form class="sy-card sy-col" id="sy_f" autocomplete="on">
+    <input class="sy-in" id="sy_u" name="username" placeholder="Nama pengguna" aria-label="Nama pengguna" autocomplete="username" autocapitalize="none" value="${E(window.FB_ADMIN||'admin')}">
+    <input class="sy-in" id="sy_p" name="password" type="password" placeholder="Sandi" aria-label="Sandi" autocomplete="current-password">
+    <div class="sy-er" id="sy_e">${E(err||'')}</div>
+    <button class="sy-go" id="sy_go" type="submit">Masuk</button>
+    <a class="sy-lk" id="sy_bk" href="#">← Kembali</a></form>`);
+  document.getElementById('sy_bk').onclick=e=>{e.preventDefault();portalView(cfg,null)};
+  document.getElementById('sy_f').onsubmit=async e=>{
+    e.preventDefault();
+    const u=document.getElementById('sy_u').value,p=document.getElementById('sy_p').value,b=document.getElementById('sy_go');
+    b.disabled=true;b.textContent='Memeriksa…';
+    try{
+      const m=await Cloud.login(u,p);
+      if(!m.isAdmin){await Cloud.logout();return loginView(cfg,'Akun ini bukan admin. Untuk SPL, pilih tombol SPL.')}
+      loadAll(cfg,m);
+    }catch(x){loginView(cfg,x.message)}
+  };
+  document.getElementById('sy_p').focus();
+}
+function failView(cfg,m){
+  scene(`<div class="sy-card sy-col"><div class="sy-er" style="display:block">${E(m)}</div><div class="sy-t" style="font-size:13px">Periksa koneksi internet lalu coba lagi. Data tidak diubah.</div><button class="sy-go" id="sy_re" type="button">Coba lagi</button></div>`);
   document.getElementById('sy_re').onclick=()=>start(cfg);
 }
 function pill(){
@@ -189,7 +206,7 @@ window.addEventListener('beforeunload',e=>{if(dirty||busy||timer||failed){e.prev
 
 /* ---------- alur mulai ---------- */
 async function start(cfg){
-  ov('<div style="color:var(--muted)">Menghubungkan ke server…</div>');
+  msg('Menghubungkan ke server…');
   let m;
   try{m=await Cloud.ready()}catch(e){return failView(cfg,e.message)}
   if(!m||!m.isAdmin)return portalView(cfg,m);
@@ -197,7 +214,7 @@ async function start(cfg){
 }
 async function loadAll(cfg,m){
   userName=Cloud.cap(m.username);
-  ov('<div style="color:var(--muted)">Memuat data dari server…</div>');
+  msg('Memuat data dari server…');
   let c=null;try{c=JSON.parse(localStorage.getItem(CK)||'null')}catch(e){}
   try{
     if(c&&c.at&&S&&S.emps){
