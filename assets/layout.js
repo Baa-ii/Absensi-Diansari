@@ -14,7 +14,7 @@ const depts=()=>[...new Set(S.emps.map(e=>e.dept))].sort();
 const PAYS=['Mingguan','2 mingguan','Bulanan'];
 const deptOpts=sel=>'<option value="">Semua departemen</option>'+depts().map(d=>`<option ${d===sel?'selected':''}>${esc(d)}</option>`).join('');
 const payOpts=sel=>'<option value="">Semua kelompok gaji</option>'+PAYS.map(d=>`<option ${d===sel?'selected':''}>${d}</option>`).join('');
-const PS=40;
+let PS=12;
 function pager(total,top){const pages=Math.max(1,Math.ceil(total/PS));if(ui.page>=pages)ui.page=pages-1;
   return `<div class="pager${top?' top':''}"><span>${total?ui.page*PS+1:0}–${Math.min(total,(ui.page+1)*PS)} dari ${total}</span><span class="tools"><button class="btn sm" data-act="prev" ${ui.page<=0?'disabled':''}>Sebelumnya</button><button class="btn sm" data-act="next" ${ui.page>=pages-1?'disabled':''}>Berikutnya</button></span></div>`}
 const matchQ=e=>(!ui.dept||e.dept===ui.dept)&&(!ui.pay||e.pay===ui.pay)&&(!ui.q||(e.name+' '+e.id+' '+e.pos).toLowerCase().includes(ui.q.toLowerCase()));
@@ -76,8 +76,28 @@ function gsearch(v){
 }
 
 /* ---------- kerangka dan render ---------- */
-$('#app').innerHTML=`<header class="top"><div class="bar1"><a class="brand" href="index.html"><span class="mark">A</span>Absensi Karyawan</a><div class="search"><input type="text" id="gs" data-bind="gs" placeholder="Cari karyawan (nama atau ID)" autocomplete="off" aria-label="Cari karyawan"><kbd>Ctrl K</kbd><div class="sr" id="gsr" hidden></div></div><div class="utools"><button class="ib" data-act="theme" title="Ganti tema" aria-label="Ganti tema">&#9790;</button><div class="user"><i>HR</i><span>Admin HRD</span></div></div></div><nav class="menubar" id="menubar" aria-label="Menu utama"></nav></header><div class="crumb" id="crumb"></div><div class="shell"><aside class="side" id="side"></aside><main id="main"></main></div><footer class="ver" id="ver"></footer>`;
-function refresh(){const l=$('#list');if(l&&LST[PAGE.view])l.innerHTML=LST[PAGE.view]()}
+$('#app').innerHTML=`<header class="top"><div class="bar1"><a class="brand" href="index.html"><span class="bt"><b>Absensi Karyawan</b><small>PT. Diansari Puri Plastindo</small></span></a><div class="search"><input type="text" id="gs" data-bind="gs" placeholder="Cari karyawan (nama atau ID)" autocomplete="off" aria-label="Cari karyawan"><kbd>Ctrl K</kbd><div class="sr" id="gsr" hidden></div></div><div class="utools"><button class="ib" data-act="theme" title="Ganti tema" aria-label="Ganti tema">&#9790;</button><div class="user"><i id="whoi">A</i><span id="whon">Admin</span><em class="sd" id="sd"></em><span id="se"></span></div><button class="btn sm" id="sy-out" hidden>Keluar</button></div></div><nav class="menubar" id="menubar" aria-label="Menu utama"></nav></header><div class="crumb" id="crumb"></div><div class="shell"><aside class="side" id="side"></aside><main id="main"></main></div><footer class="ver" id="ver"></footer>`;
+function refresh(){const l=$('#list');if(l&&LST[PAGE.view])l.innerHTML=LST[PAGE.view]();else if(PAGE.view==='ringkasan')render()}
+/* jumlah baris per halaman menyesuaikan tinggi layar supaya pas satu layar */
+let fitBusy=false;
+function fit(){
+  if(fitBusy||ui.drawer)return;
+  if(window.innerWidth<700){PS=10;return}
+  fitBusy=true;
+  try{for(let k=0;k<4;k++){
+    const rows=[...document.querySelectorAll('[data-row],#list tbody tr')].filter(r=>!r.querySelector('.empty'));
+    if(!rows.length)break;
+    const a=rows[0].getBoundingClientRect(),b=rows[rows.length-1].getBoundingClientRect();
+    const rh=Math.max(24,(b.bottom-a.top)/rows.length),over=document.documentElement.scrollHeight-window.innerHeight;
+    let n=PS;
+    if(over>0)n=PS-Math.ceil(over/rh);else if(rows.length>=PS)n=PS+Math.floor(-over/rh);
+    n=Math.max(PAGE.view==='ringkasan'?3:4,Math.min(60,n));
+    if(n===PS)break;
+    const first=ui.page*PS;PS=n;ui.page=Math.floor(first/PS);
+    const l=$('#list');if(l&&LST[PAGE.view])l.innerHTML=LST[PAGE.view]();else render();
+  }}finally{fitBusy=false}
+}
+let fitT=null;window.addEventListener('resize',()=>{clearTimeout(fitT);fitT=setTimeout(fit,200)});
 function render(){
   const cur=secOf(PAGE.view)||SEC[0],sub=PAGE.getSub?PAGE.getSub():null;
   $('#menubar').innerHTML=SEC.map(s=>`<a href="${s.items[0].href}" ${s===cur?'aria-current="page"':''}>${s.t}</a>`).join('');
@@ -87,9 +107,10 @@ function render(){
   const bad=PAGE.need?Object.keys(PAGE.need).filter(k=>APPV[k]!==PAGE.need[k]):[];
   $('#main').innerHTML=(bad.length?'<div class="banner bad">File aplikasi tidak cocok ('+bad.join(', ')+'). Unggah ulang seluruh folder assets bersama semua halaman, lalu muat ulang dengan Ctrl+F5.</div>':'')+(S.demo?'<div class="banner">Menampilkan data contoh. Hapus di Pengaturan, Data & cadangan, sebelum memakai data asli.</div>':'')+V[PAGE.view]();
   const d=ui.drawer&&S.emps.find(e=>e.id===ui.drawer);if(d){layer().innerHTML=`<div class="over-ov" data-act="ovclick" style="padding:0;justify-content:flex-end">${drawerHTML(d)}</div>`}
-  $('#ver').textContent='© Diansari \u00b7 versi '+APPV.data+' \u00b7 data '+APPV.data+' \u00b7 tampilan '+APPV.layout;
+  $('#ver').textContent='Absensi Karyawan \u00b7 versi '+APPV.data+' \u00b7 data '+APPV.data+' \u00b7 tampilan '+APPV.layout;
   if(PAGE.after)PAGE.after();
   saveUi();
+  fit();
 }
 function boot(cfg){Object.assign(PAGE,cfg);ui.view=cfg.view;ui.page=0;render()}
 

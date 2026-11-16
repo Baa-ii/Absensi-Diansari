@@ -5,7 +5,7 @@
 if(typeof boot==='undefined'||typeof S==='undefined'||!window.Cloud)return;
 const CK='absensi-sync-at',MARGIN=600000;
 const _boot=boot;
-let SH=new Map(),lastAt=0,dirty=false,busy=false,timer=null,failed=false,queue=[],rr=false,userName='';
+let SH=new Map(),lastAt=0,synced=false,dirty=false,busy=false,timer=null,failed=false,queue=[],rr=false,userName='';
 const SKIP=new Set(['emps','att','spl']);
 
 /* ---------- bentuk data ---------- */
@@ -27,8 +27,9 @@ function split(st){
 const shadowOf=sp=>{const o=new Map();sp.forEach((m,id)=>{const s=new Map();m.forEach((x,k)=>s.set(k,x.j));o.set(id,s)});return o};
 
 /* ---------- simpan ke server ---------- */
-function save2(){dirty=true;clearTimeout(timer);timer=setTimeout(flush,700);stat('wait')}
+function save2(){dirty=true;clearTimeout(timer);timer=null;if(synced)timer=setTimeout(flush,700);stat('wait')}
 async function flush(){
+  if(!synced){dirty=true;return}
   if(busy){dirty=true;return}
   busy=true;dirty=false;clearTimeout(timer);timer=null;
   try{
@@ -54,7 +55,7 @@ async function flush(){
   if(!failed){if(dirty)flush();else drain()}
 }
 function cache(){
-  try{localStorage.setItem(KEY,JSON.stringify(S));localStorage.setItem(CK,JSON.stringify({at:lastAt}))}
+  try{localStorage.setItem(KEY,JSON.stringify(S));localStorage.setItem(CK,JSON.stringify({at:lastAt,u:userName}))}
   catch(e){try{localStorage.removeItem(CK)}catch(x){}}
 }
 
@@ -181,31 +182,49 @@ function failView(cfg,m){
   scene(`<div class="sy-card sy-col"><div class="sy-er" style="display:block">${E(m)}</div><div class="sy-t" style="font-size:13px">Periksa koneksi internet lalu coba lagi. Data tidak diubah.</div><button class="sy-go" id="sy_re" type="button">Coba lagi</button></div>`);
   document.getElementById('sy_re').onclick=()=>start(cfg);
 }
-function pill(){
-  let p=document.getElementById('syncpill');
-  if(!p){p=document.createElement('div');p.id='syncpill';
-    p.style.cssText='position:fixed;left:12px;bottom:12px;z-index:50;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font:12px var(--ui);color:var(--muted);box-shadow:var(--shadow);display:flex;gap:8px;align-items:center';
-    p.innerHTML='<span id="sp_t"></span><a id="sp_o" href="#" style="color:var(--accent)">Keluar</a>';
-    document.body.appendChild(p);
-    document.getElementById('sp_o').onclick=async e=>{e.preventDefault();
-      if(busy||dirty||timer){await flush()}
-      if(failed){if(!confirm('Ada perubahan yang belum tersimpan ke server. Tetap keluar?'))return}
-      try{await Cloud.logout()}catch(x){}
-      try{localStorage.removeItem(CK);localStorage.removeItem(KEY)}catch(x){}
-      location.reload()};
-  }
-  return p;
+async function logoutNow(){
+  if(busy||dirty||timer){await flush()}
+  if(failed||dirty){if(!confirm('Ada perubahan yang belum tersimpan ke server. Tetap keluar?'))return}
+  try{await Cloud.logout()}catch(x){}
+  try{localStorage.removeItem(CK);localStorage.removeItem(KEY)}catch(x){}
+  location.reload();
+}
+function wireHeader(name){
+  if(name)userName=name;
+  const n=document.getElementById('whon'),i=document.getElementById('whoi'),o=document.getElementById('sy-out');
+  if(n&&userName)n.textContent=userName;
+  if(i&&userName)i.textContent=userName.charAt(0).toUpperCase();
+  if(o){o.hidden=false;o.onclick=logoutNow}
 }
 function stat(k,msg){
-  const p=pill(),t=document.getElementById('sp_t');
-  const c={ok:'var(--good)',wait:'var(--warn)',err:'var(--bad)'}[k];
-  const tx={ok:'Tersimpan di server',wait:'Menyimpan…',err:'Gagal menyimpan, mencoba lagi… '+(msg||'')}[k];
-  t.innerHTML='<span style="color:'+c+'">●</span> '+E(tx)+(userName?' · '+E(userName):'');
+  const d=document.getElementById('sd'),e=document.getElementById('se');
+  if(d){d.className='sd'+(k==='ok'?'':' '+k);d.title={ok:'Tersimpan di server',wait:'Menyimpan…',err:'Gagal menyimpan',off:'Tidak terhubung ke server'}[k]||''}
+  if(e)e.textContent=k==='err'?(msg||'Gagal menyimpan'):(k==='off'?'Tidak terhubung':'');
 }
 window.addEventListener('beforeunload',e=>{if(dirty||busy||timer||failed){e.preventDefault();e.returnValue=''}});
 
 /* ---------- alur mulai ---------- */
+async function bg(cfg){
+  let m;
+  try{m=await Cloud.ready()}catch(e){stat('off');setTimeout(()=>bg(cfg),15000);return}
+  if(!m||!m.isAdmin){portalView(cfg,m);return}
+  wireHeader(Cloud.cap(m.username));
+  try{
+    const docs=await Cloud.dSince(Math.max(0,lastAt-MARGIN));
+    if(apply(docs))rerender();
+  }catch(e){stat('err',e.message);setTimeout(()=>bg(cfg),15000);return}
+  synced=true;stat(dirty?'wait':'ok');
+  try{await Cloud.dListen(Math.max(0,lastAt-MARGIN),docs=>{queue.push(...docs);drain()},e=>stat('err',e.message))}catch(e){}
+  if(dirty)flush();
+}
 async function start(cfg){
+  let c0=null;try{c0=JSON.parse(localStorage.getItem(CK)||'null')}catch(e){}
+  if(c0&&c0.at&&S&&S.emps){
+    /* tampilkan langsung dari data tersimpan, server diperiksa di latar belakang */
+    lastAt=c0.at;SH=shadowOf(split(S));userName=c0.u||'';
+    hideOv();_boot(cfg);wireHeader();stat('wait');
+    bg(cfg);return;
+  }
   msg('Menghubungkan ke server…');
   let m;
   try{m=await Cloud.ready()}catch(e){return failView(cfg,e.message)}
@@ -224,12 +243,11 @@ async function loadAll(cfg,m){
       S=blank();SH=new Map();lastAt=0;
       const docs=await Cloud.dSince(0);
       apply(docs);
-      if(!docs.length){dirty=true;await flush();if(failed)throw new Error('Gagal menyimpan data awal ke server.')}
+      if(!docs.length){synced=true;dirty=true;await flush();if(failed)throw new Error('Gagal menyimpan data awal ke server.')}
       else cache();
     }
   }catch(e){return failView(cfg,e.message)}
-  hideOv();stat(failed?'err':'ok');
-  _boot(cfg);
+  synced=true;hideOv();_boot(cfg);wireHeader();stat(failed?'err':'ok');
   try{await Cloud.dListen(Math.max(0,lastAt-MARGIN),docs=>{queue.push(...docs);drain()},e=>stat('err',e.message))}catch(e){}
 }
 

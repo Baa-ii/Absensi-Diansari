@@ -162,3 +162,29 @@ label.f input,label.f select,label.f textarea{font-weight:400;color:var(--ink)}
 .ver{text-align:center;color:var(--muted);font-size:12px;padding:20px 0 4px}
 .banner.bad{background:var(--bad-soft);color:var(--bad)}
 .brand{text-decoration:none;color:inherit}
+
+/* kepala: nama PT, pil akun, status simpan */
+.brand .bt{display:flex;flex-direction:column;line-height:1.15}
+.brand .bt small{font-size:11px;font-weight:500;color:var(--muted);letter-spacing:0}
+.user{gap:8px}
+.user .sd{width:8px;height:8px;border-radius:50%;background:var(--good);display:inline-block;font-style:normal}
+.user .sd.wait{background:var(--warn)}.user .sd.err{background:var(--bad)}.user .sd.off{background:var(--line)}
+.user #se{font-size:11px;color:var(--bad);font-weight:500;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user #se:empty{display:none}
+#sy-out{margin-left:2px}
+@media (max-width:700px){.brand .bt small{font-size:10px}.user #se{display:none}}
+
+/* layar pendek (laptop): rapatkan jarak supaya halaman pas satu layar */
+@media (max-height:900px){
+  .bar1{padding:6px 16px}.menubar{padding:0 10px 6px}.menubar a{padding:5px 14px}
+  .top{margin-bottom:8px}.crumb{padding:0 4px 6px}
+  .tb{padding:9px 16px}.tb .sub{display:none}
+  th{padding:7px 14px}td{padding:6px 14px}
+  .stat{padding:8px 16px}.stat b{font-size:22px}
+  .item{padding:6px 18px}.ph{padding:10px 18px 4px}
+  .pad{padding:12px 18px}.panel.pad .ph{padding-bottom:10px!important}.bars{height:56px}.bars+div{height:6px!important}
+  .pager{padding:6px 14px}.panel>.tools{padding:8px 14px!important}
+  .ver{padding:6px 0 2px}.cols,.shell{gap:10px}
+}
+@media (max-height:800px){.bars{height:40px}.stat{padding:6px 16px}.stat b{font-size:20px}.item{padding:5px 18px}}
+@media (max-height:700px){.crumb{display:none}.ver{display:none}}
