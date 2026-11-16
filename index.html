@@ -6,6 +6,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <title>Absensi Karyawan</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap">
+<link rel="icon" type="image/png" href="assets/favicon.png">
 <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
@@ -16,6 +17,7 @@
 <script src="assets/layout.js"></script>
 <script src="assets/firebase-config.js"></script>
 <script src="assets/cloud.js"></script>
+<script src="assets/idle.js"></script>
 <script src="assets/sync.js"></script>
 <script>if(typeof boot==='undefined'||typeof S==='undefined'){document.body.innerHTML='<p style="padding:24px;font:16px system-ui,sans-serif">File aplikasi belum lengkap. Unggah folder assets (style.css, data.js, layout.js) bersama semua halaman ke GitHub.</p>'}</script>
 <script>
@@ -28,8 +30,6 @@ V.ringkasan=()=>{
   const hol=isHoliday(ds),ord={'Alpa':0,'Tidak lengkap':1,'Terlambat':2};
   const attn=rows.filter(r=>r.i.status in ord).sort((a,b)=>ord[a.i.status]-ord[b.i.status]);
   ui.page=Math.max(0,Math.min(ui.page||0,Math.ceil(attn.length/PS)-1));
-  const days=[];for(let d=pd(ds),k=0;k<21&&days.length<14;k++,d.setDate(d.getDate()-1)){const s=dstr(d);if(!isHoliday(s))days.push(s)}days.reverse();
-  const pct=days.map(s=>{let n=0;E.forEach(e=>{const st=dayInfo(e,s).status;if(st==='Hadir'||st==='Terlambat'||st==='Dinas Luar')n++});return Math.round(n/E.length*100)});
   const pend=S.spl.filter(s=>s.status==='Disetujui'&&s.date===ds);
   return tb('Ringkasan harian',`<button class="btn" data-act="dayprev" aria-label="Hari sebelumnya">←</button><input type="date" id="daysel" data-bind="day" value="${ds}"><button class="btn" data-act="daynext" aria-label="Hari berikutnya">→</button>`,`${fmtDate(ds)}${hol?' · hari libur kantor':''} · ${E.length} karyawan aktif`)+
   `<div class="stats">
@@ -39,6 +39,7 @@ V.ringkasan=()=>{
     <div class="stat b"><b>${alpa}</b><span>Alpa</span></div>
     <div class="stat w"><b>${inc}</b><span>Scan tidak lengkap</span></div>
     <div class="stat"><b>${otN}</b><span>Lembur ber-SPL</span></div></div>
+  <div class="mix"><span class="mixt"><b>${Math.round((hadir+telat+dinas)/E.length*100)}%</b> hadir</span><div class="mixb" role="img" aria-label="Komposisi kehadiran hari ini">${[[hadir+dinas,'var(--good)','Hadir'],[telat,'var(--warn)','Terlambat'],[izin,'var(--muted)','Izin / sakit / cuti'],[alpa,'var(--bad)','Alpa'],[inc,'var(--warn-soft)','Scan tidak lengkap'],[Math.max(0,E.length-hadir-dinas-telat-izin-alpa-inc),'var(--line)','Lainnya']].map(x=>`<i style="flex:${x[0]};background:${x[1]}" title="${x[2]}: ${x[0]}"></i>`).join('')}</div></div>
   <div class="cols">
     <section class="panel"><div class="ph"><h2>Perlu perhatian</h2><span class="muted">${attn.length} orang</span></div>
       <div class="list">${attn.slice(ui.page*PS,(ui.page+1)*PS).map(r=>`<div class="item" data-row><div class="t"><b>${esc(r.e.name)}</b><span>${esc(r.e.dept)} · ${r.i.r.in?r.i.r.in+' – '+(r.i.r.out&&r.i.r.n>1?r.i.r.out+(r.i.r.nd?' +1':''):'belum pulang'):'tidak ada scan'}${r.i.late?' · telat '+r.i.late+' mnt':''}</span></div><span class="pill ${pillCls(r.i.status)}">${r.i.status}</span></div>`).join('')||'<div class="empty">Tidak ada yang perlu ditindaklanjuti.</div>'}
@@ -46,10 +47,7 @@ V.ringkasan=()=>{
     <section class="panel"><div class="ph"><h2>SPL pada tanggal ini</h2><span class="muted">${pend.length}</span></div>
       <div class="list">${pend.map(s=>`<div class="item"><div class="t"><b>${fmtDate(s.date)} · ${s.start}–${s.end}</b><span>${esc(s.dept||'')} · ${s.emps.length} orang · ${esc(s.reason)}</span></div>
         <button class="btn sm" data-act="viewspl" data-id="${esc(s.id)}">Lihat</button></div>`).join('')||'<div class="empty">Tidak ada SPL pada tanggal ini.</div>'}</div></section>
-  </div>
-  <section class="panel pad"><div class="ph" style="padding:0 0 22px"><h2>Kehadiran 14 hari kerja terakhir</h2><span class="muted">% karyawan hadir</span></div>
-    <div class="bars"><div class="g" style="bottom:100%"><span>100%</span></div><div class="g" style="bottom:50%"><span>50%</span></div>
-      ${pct.map((p,i)=>`<div class="bar ${i===pct.length-1?'last':''}" style="height:${p}%" title="${fmtDate(days[i])}: ${p}%"><span>${days[i].slice(8)}</span></div>`).join('')}</div><div style="height:20px"></div></section>`;
+  </div>`;
 };
 Object.assign(ACT,{
   dayprev(){const d=pd(ui.day);d.setDate(d.getDate()-1);ui.day=dstr(d);ui.page=0;render()},

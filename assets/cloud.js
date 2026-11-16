@@ -12,7 +12,8 @@
     if(!window.FB_CONFIG)throw new Error('Pengaturan Firebase belum ada (assets/firebase-config.js).');
     const [a,au,fs]=await Promise.all([import(BASE+'firebase-app.js'),import(BASE+'firebase-auth.js'),import(BASE+'firebase-firestore.js')]);
     const app=a.initializeApp(window.FB_CONFIG);
-    auth=au.getAuth(app);db=fs.getFirestore(app);M={au,fs};
+    auth=au.getAuth(app);try{await au.setPersistence(auth,au.browserSessionPersistence)}catch(e){}
+    db=fs.getFirestore(app);M={au,fs};
     return M;
   }
   function me(){

@@ -5,21 +5,21 @@ body{margin:0}
 img{max-width:100%}
 /* Layout: sticky top bar (brand, search, tools) + horizontal main menu, breadcrumb, left section panel, content column */
 :root{
-  --bg:#F3F6F5; --surface:#FFFFFF; --ink:#17201E; --muted:#66726E; --line:#E2E7E4; --hover:#EFF3F1;
-  --accent:#1F5F54; --accent-ink:#FFFFFF; --accent-soft:#E2EFEB;
+  --bg:#F5F6F7; --surface:#FFFFFF; --ink:#1D2024; --muted:#6B7177; --line:#E4E7E9; --hover:#F0F2F3;
+  --accent:#2B3036; --accent-ink:#FFFFFF; --accent-soft:#ECEEF0; --brand:#CC2229;
   --good:#2C7A58; --good-soft:#E0F1E8; --warn:#9A6A12; --warn-soft:#F8EDD3; --bad:#B03F2B; --bad-soft:#F8E1DC;
   --shadow:0 12px 40px rgba(20,32,28,.14);
   --ui:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif;
   --num:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0E1513; --surface:#151D1A; --ink:#E7EEEB; --muted:#92A09A; --line:#25302C; --hover:#1B2522;
-  --accent:#5FBBA6; --accent-ink:#0A1411; --accent-soft:#1A2E29;
+  --bg:#101214; --surface:#181B1E; --ink:#E8EAEC; --muted:#9AA1A8; --line:#272C30; --hover:#1E2226;
+  --accent:#E3E6E8; --accent-ink:#14171A; --accent-soft:#23282C; --brand:#E5484D;
   --good:#5CC393; --good-soft:#173126; --warn:#DDAA45; --warn-soft:#352B14; --bad:#EC8570; --bad-soft:#38201B;
   --shadow:0 12px 40px rgba(0,0,0,.5); color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#0E1513; --surface:#151D1A; --ink:#E7EEEB; --muted:#92A09A; --line:#25302C; --hover:#1B2522;
-  --accent:#5FBBA6; --accent-ink:#0A1411; --accent-soft:#1A2E29;
+  --bg:#101214; --surface:#181B1E; --ink:#E8EAEC; --muted:#9AA1A8; --line:#272C30; --hover:#1E2226;
+  --accent:#E3E6E8; --accent-ink:#14171A; --accent-soft:#23282C; --brand:#E5484D;
   --good:#5CC393; --good-soft:#173126; --warn:#DDAA45; --warn-soft:#352B14; --bad:#EC8570; --bad-soft:#38201B;
   --shadow:0 12px 40px rgba(0,0,0,.5); color-scheme:dark}
 
@@ -188,3 +188,16 @@ label.f input,label.f select,label.f textarea{font-weight:400;color:var(--ink)}
 }
 @media (max-height:800px){.bars{height:40px}.stat{padding:6px 16px}.stat b{font-size:20px}.item{padding:5px 18px}}
 @media (max-height:700px){.crumb{display:none}.ver{display:none}}
+
+/* palet abu tipis, merah logo hanya sebagai aksen */
+.menubar a[aria-current="page"]{background:var(--accent-soft);color:var(--ink);box-shadow:inset 0 -2px 0 var(--brand)}
+.sl a[aria-current="page"]{background:var(--accent-soft);color:var(--ink);box-shadow:inset 3px 0 0 var(--brand)}
+.ent{background:var(--accent-soft);color:var(--ink);border-bottom:1px solid var(--line)}.ent span{opacity:.7}
+.brand{gap:10px}.brand .lg{height:42px;width:auto;display:block}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .brand .lg{background:#fff;border-radius:8px;padding:3px}}
+:root[data-theme="dark"] .brand .lg{background:#fff;border-radius:8px;padding:3px}
+@media (max-height:900px){.brand .lg{height:34px}}
+.mix{display:flex;align-items:center;gap:12px;padding:2px 4px}
+.mixt{font-size:13px;color:var(--muted);white-space:nowrap}.mixt b{color:var(--ink);font-size:15px;font-weight:700}
+.mixb{flex:1;display:flex;height:8px;border-radius:99px;overflow:hidden;background:var(--line)}.mixb i{display:block;min-width:0}
+@media (max-width:700px){.user i{display:none}.user{padding:6px 10px}.brand{min-width:0}.brand .lg{height:32px}.brand .bt b{font-size:14px}.brand .bt small{white-space:nowrap}.utools{gap:4px}}
