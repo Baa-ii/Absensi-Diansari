@@ -25,6 +25,8 @@ function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 function migrate(s){
   s.set=s.set||DEFAULT_SET();
   s.set.shifts.forEach(x=>{if(x.rot==null)x.rot=x.id!=='reg'});
+  s.set.shifts.forEach(x=>{if(x.sm==null){const d={pagi:['jam','07:00','12:00','ikut',0],siang:['jam','12:00','17:00','ikut',0],malam:['libur','07:00','12:00','libur',12000]}[x.id];x.sm=d?d[0]:'biasa';x.sa=d?d[1]:'07:00';x.sb=d?d[2]:'12:00';x.mm=d?d[3]:'biasa';x.tj=d?d[4]:0}});
+  if(!s.set.v2){s.set.sat=true;s.set.v2=1}
   if(s.set.rate==null)s.set.rate=24000;
   s.set.holidays=s.set.holidays||[];
   s.emps=s.emps||[];
@@ -89,29 +91,39 @@ function isNight(sh){return toMin(sh.end)<=toMin(sh.start)}
 const dur=s=>(toMin(s.end)-toMin(s.start)+1440)%1440;
 const rateOf=e=>e&&e.rate>0?e.rate:S.set.rate;
 function isHoliday(ds){const dow=pd(ds).getDay();return S.set.holidays.includes(ds)||dow===0||(dow===6&&!S.set.sat)}
-function detectShift(t){
+function detectShift(t,ds){
   let c=S.set.shifts.filter(s=>s.rot);if(!c.length)c=S.set.shifts;
-  let best=null;
-  c.forEach(s=>{const diff=Math.abs(((t-toMin(s.start)+720)%1440+1440)%1440-720);if(!best||diff<best.dist)best={id:s.id,dist:diff}});
+  let best=null;const sat=ds&&pd(ds).getDay()===6;
+  c.forEach(s=>{const st=[toMin(s.start)];if(sat&&s.sm==='jam'&&s.sa)st.push(toMin(s.sa));
+    st.forEach(m=>{const diff=Math.abs(((t-m+720)%1440+1440)%1440-720);if(!best||diff<best.dist)best={id:s.id,dist:diff}})});
   return best;
 }
+/* Minggu 'ikut Sabtu': karyawan masuk Sabtu (ada scan) hari sebelumnya? */
+function satWorked(e,ds){const d=pd(ds);d.setDate(d.getDate()-1);const r=S.att[e.id+'|'+dstr(d)];return !!(r&&r.in)}
 function dayInfo(e,ds){
   const r=S.att[e.id+'|'+ds]||{},rot=e.sched==='bergilir',hol=rot?false:isHoliday(ds);
   const sh=(rot&&S.set.shifts.find(x=>x.id===(r.shov||r.sh)))||shiftOf(e);
+  const dow=pd(ds).getDay();
+  /* mode hari: biasa | jam (Sabtu: jam biasa terbatas, sisanya lembur) | libur (masuk = lembur penuh) */
+  let wm='biasa';
+  if(rot){if(dow===6)wm=sh.sm||'biasa';else if(dow===0){const m=sh.mm||'biasa';wm=m==='ikut'?(satWorked(e,ds)?'libur':'biasa'):m}}
   const night=isNight(sh),inM=toMin(r.in),outM=toMin(r.out)+(r.nd?1440:0),sEnd=toMin(sh.end)+(night?1440:0);
   const complete=r.n>1&&inM!=null&&outM-inM>=30;
   let status,late=0;
   if(r.ov)status=r.ov;
   else if(r.in){
     if(!complete)status='Tidak lengkap';
-    else if(!hol&&inM>toMin(sh.start)+S.set.tol){status='Terlambat';late=inM-toMin(sh.start)}
+    else if(!hol&&wm==='biasa'&&inM>toMin(sh.start)+S.set.tol){status='Terlambat';late=inM-toMin(sh.start)}
     else status='Hadir';
-  }else status=rot?(ds<TODAY?'Tanpa scan':'—'):hol?'Libur':(ds<TODAY?'Alpa':'—');
+  }else status=rot?((dow===0||dow===6)?(ds<TODAY?'Libur':'—'):(ds<TODAY?'Tanpa scan':'—')):hol?'Libur':(ds<TODAY?'Alpa':'—');
   let ot=0;
   if(complete&&!r.ov){
     if(hol){let w=outM-inM;if(w>300)w-=60;ot=w>=S.set.minOT?w:0}
+    else if(wm==='libur'){const w=outM-inM;ot=w>=S.set.minOT?w:0}
+    else if(wm==='jam'){const x=(outM-inM)-(toMin(sh.sb)-toMin(sh.sa));ot=x>=S.set.minOT?x:0}
     else{const x=outM-sEnd;ot=x>=S.set.minOT?x:0}
   }
+  const tj=(complete&&!r.ov&&!hol&&wm==='biasa'&&sh.tj>0&&(status==='Hadir'||status==='Terlambat'))?+sh.tj:0;
   const spl=S.spl.find(s=>s.status==='Disetujui'&&s.date===ds&&s.emps.includes(e.id));
   let paid=0,flag='';
   if(ot>0){
@@ -119,10 +131,10 @@ function dayInfo(e,ds){
     else if(!e.ot)flag='Tidak berhak lembur';
     else paid=Math.floor(Math.min(ot,dur(spl))/30)*30;
   }
-  return {r,hol,sh,rot,status,late,ot,spl,paid,flag,un:rot&&!!r.un&&!r.shov,amt:paid/60*rateOf(e)};
+  return {r,hol,sh,rot,wm,status,late,ot,spl,paid,flag,tj,un:rot&&!!r.un&&!r.shov,amt:paid/60*rateOf(e)};
 }
 function recap(e,days){
-  const o={hadir:0,telat:0,izin:0,alpa:0,inc:0,noscan:0,un:0,otMin:0,amt:0,noSpl:0};
+  const o={hadir:0,telat:0,izin:0,alpa:0,inc:0,noscan:0,un:0,otMin:0,amt:0,noSpl:0,tj:0};
   days.forEach(ds=>{const i=dayInfo(e,ds);
     if(['Hadir','Terlambat','Dinas Luar'].includes(i.status))o.hadir++;
     if(i.status==='Terlambat')o.telat++;
@@ -131,7 +143,7 @@ function recap(e,days){
     if(i.status==='Tanpa scan')o.noscan++;
     if(i.status==='Tidak lengkap')o.inc++;
     if(i.un)o.un++;
-    o.otMin+=i.paid;o.amt+=i.amt;if(i.flag==='Tanpa SPL')o.noSpl++;});
+    o.otMin+=i.paid;o.amt+=i.amt;o.tj+=i.tj;if(i.flag==='Tanpa SPL')o.noSpl++;});
   return o;
 }
 const pillCls=s=>({'Hadir':'good','Terlambat':'warn','Tidak lengkap':'warn','Alpa':'bad','Izin':'info','Sakit':'info','Cuti':'info','Dinas Luar':'info'}[s]||'');

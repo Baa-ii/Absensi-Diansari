@@ -26,14 +26,22 @@ V.pengaturan=()=>{
   const t=ui.setTab,head={jam:'Jam kerja',aturan:'Aturan & tarif',libur:'Hari libur',data:'Data & cadangan'}[t];
   let body='';
   if(t==='jam')body=`<section class="panel pad" style="display:flex;flex-direction:column;gap:16px">
-    ${S.set.shifts.map((s,i)=>`<div class="form"><label class="f">Nama shift<input type="text" data-bind="shiftf" data-i="${i}" data-k="name" value="${esc(s.name)}"></label><label class="f">Masuk<input type="time" data-bind="shiftf" data-i="${i}" data-k="start" value="${s.start}"></label><label class="f">Pulang<input type="time" data-bind="shiftf" data-i="${i}" data-k="end" value="${s.end}"></label>
-      <label class="f">Dipakai karyawan bergilir<span style="height:34px;display:flex;align-items:center"><span class="sw"><input type="checkbox" data-bind="shiftrot" data-i="${i}" ${s.rot?'checked':''} aria-label="Dipakai karyawan bergilir"><i></i></span></span></label></div>`).join('')}
-    <p class="sub">Jika jam pulang lebih awal dari jam masuk (misalnya 23:00–07:00), shift dianggap melewati tengah malam dan dicatat pada tanggal masuk. Shift yang ditandai "dipakai karyawan bergilir" menjadi pilihan saat aplikasi menebak shift dari jam scan masuk.</p></section>`;
+    ${S.set.shifts.map((s,i)=>`<div style="border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:12px">
+      <div class="form"><label class="f">Nama shift<input type="text" data-bind="shiftf" data-i="${i}" data-k="name" value="${esc(s.name)}"></label><label class="f">Masuk<input type="time" data-bind="shiftf" data-i="${i}" data-k="start" value="${s.start}"></label><label class="f">Pulang<input type="time" data-bind="shiftf" data-i="${i}" data-k="end" value="${s.end}"></label>
+      <label class="f">Tunjangan per hari (Rp)<input type="number" min="0" step="1000" data-bind="shiftn" data-i="${i}" data-k="tj" value="${s.tj||0}"></label>
+      <label class="f">Dipakai karyawan bergilir<span style="height:34px;display:flex;align-items:center"><span class="sw"><input type="checkbox" data-bind="shiftrot" data-i="${i}" ${s.rot?'checked':''} aria-label="Dipakai karyawan bergilir"><i></i></span></span></label></div>
+      ${s.rot?`<div class="form"><label class="f">Sabtu<select data-bind="shiftm" data-i="${i}" data-k="sm"><option value="biasa" ${s.sm==='biasa'?'selected':''}>Sama seperti hari biasa</option><option value="jam" ${s.sm==='jam'?'selected':''}>Jam khusus Sabtu</option><option value="libur" ${s.sm==='libur'?'selected':''}>Libur (kalau masuk = lembur)</option></select></label>
+        ${s.sm==='jam'?`<label class="f">Sabtu masuk<input type="time" data-bind="shiftf" data-i="${i}" data-k="sa" value="${s.sa||'07:00'}"></label><label class="f">Sabtu pulang<input type="time" data-bind="shiftf" data-i="${i}" data-k="sb" value="${s.sb||'12:00'}"></label>`:''}
+        <label class="f">Minggu<select data-bind="shiftm" data-i="${i}" data-k="mm"><option value="biasa" ${s.mm==='biasa'?'selected':''}>Sama seperti hari biasa</option><option value="ikut" ${s.mm==='ikut'?'selected':''}>Ikut Sabtu</option><option value="libur" ${s.mm==='libur'?'selected':''}>Libur (kalau masuk = lembur)</option></select></label></div>`:''}
+      <div class="tools" style="justify-content:flex-end"><button class="btn sm bad" data-act="delshift" data-id="${esc(s.id)}">${ui.sx===s.id?'Yakin hapus?':'Hapus shift'}</button></div></div>`).join('')}
+    <div><button class="btn" data-act="addshift">+ Tambah shift</button></div>
+    <p class="sub">Jika jam pulang lebih awal dari jam masuk (misalnya 23:00–07:00), shift dianggap melewati tengah malam dan dicatat pada tanggal masuk. Shift yang ditandai "dipakai karyawan bergilir" menjadi pilihan saat aplikasi menebak shift dari jam scan masuk.</p>
+    <p class="sub"><b>Sabtu "jam khusus":</b> jam biasa dihitung dari selisih jam masuk dan pulang Sabtu (misalnya 5 jam); kelebihan jam kerja dihitung lembur. <b>Minggu "ikut Sabtu":</b> hari biasa bila karyawan tidak masuk Sabtu, lembur bila Sabtunya masuk. <b>Libur:</b> kalau masuk, seluruh jam kerja dihitung lembur. <b>Tunjangan per hari</b> hanya diberikan pada hari kerja biasa (bukan hari yang dihitung lembur). Lembur tetap dibayar hanya bila ada SPL aktif.</p></section>`;
   if(t==='aturan')body=`<section class="panel pad" style="display:flex;flex-direction:column;gap:16px">
     <div class="form"><label class="f">Toleransi terlambat (menit)<input type="number" min="0" data-bind="setn" data-k="tol" value="${S.set.tol}"></label><label class="f">Lembur minimal (menit)<input type="number" min="0" step="5" data-bind="setn" data-k="minOT" value="${S.set.minOT}"></label><label class="f">Tarif lembur umum per jam (Rp)<input type="number" min="0" step="500" data-bind="setn" data-k="rate" value="${S.set.rate||0}"></label></div>
     <label style="display:flex;gap:10px;align-items:center;font-weight:600"><span class="sw"><input type="checkbox" data-bind="sat" ${S.set.sat?'checked':''}><i></i></span>Sabtu termasuk hari kerja kantor</label>
     <p class="sub">Nominal lembur = jam lembur dibayar × tarif per jam, tanpa pengali. Tarif di data karyawan (jika diisi) menggantikan tarif umum. Jam dibayar dibulatkan ke bawah per 30 menit. Angka ini estimasi untuk dicek bagian penggajian.</p>
-    <p class="sub">Karyawan bergilir dianggap bekerja sesuai shift yang terdeteksi, termasuk Sabtu dan Minggu. Hari tanpa scan mereka ditampilkan sebagai "Tanpa scan", bukan Alpa, karena jadwal libur mereka belum diketahui.</p></section>`;
+    <p class="sub">Karyawan bergilir dianggap bekerja sesuai shift yang terdeteksi, termasuk Sabtu dan Minggu. Hari kerja biasa tanpa scan ditampilkan sebagai "Tanpa scan", bukan Alpa, karena jadwal libur mereka belum diketahui. Sabtu atau Minggu tanpa scan dianggap Libur.</p></section>`;
   if(t==='libur')body=`<section class="panel pad" style="display:flex;flex-direction:column;gap:12px"><div class="tools"><input type="date" id="holin"><button class="btn" data-act="addhol">Tambah</button></div>
     <div class="tools">${S.set.holidays.slice().sort().map(h=>`<span class="pill info">${fmtDate(h)} <a href="#pengaturan" data-act="delhol" data-id="${h}" aria-label="Hapus" style="text-decoration:none;margin-left:4px">×</a></span>`).join('')||'<span class="muted">Belum ada.</span>'}</div><p class="sub">Berlaku untuk karyawan berjadwal tetap.</p></section>`;
   if(t==='data')body=`<section class="panel pad" style="display:flex;flex-direction:column;gap:14px"><h2>Cadangan</h2>
@@ -54,6 +62,10 @@ function dangerModal(k){ui.danger=k;const w=k==='wipe';
   <label class="f">Ketik HAPUS untuk melanjutkan<input type="text" id="dz-conf" data-bind="delconf" autocomplete="off"></label>
   <div class="tools" style="justify-content:flex-end"><button class="btn" data-act="closemodal">Batal</button><button class="btn bad" id="del-go" data-act="dzgo" disabled>${w?'Hapus semua data':'Ganti dengan data contoh'}</button></div>`)}
 Object.assign(ACT,{
+  addshift(){const n=S.set.shifts.length+1;S.set.shifts.push({id:'s'+Date.now().toString(36),name:'Shift '+n,start:'07:00',end:'15:00',rot:true,sm:'biasa',sa:'07:00',sb:'12:00',mm:'biasa',tj:0});save();render();toast('Shift ditambahkan')},
+  delshift(a){const id=a.dataset.id;if(S.set.shifts.length<=1){toast('Minimal harus ada satu shift');return}
+    const n=S.emps.filter(e=>e.shift===id).length;if(n){toast('Shift ini dipakai '+n+' karyawan (shift tetap). Ganti dulu di menu Karyawan.');return}
+    if(ui.sx!==id){ui.sx=id;render();return}ui.sx=null;S.set.shifts=S.set.shifts.filter(s=>s.id!==id);save();render();toast('Shift dihapus')},
   addhol(){const v=$('#holin').value;if(v&&!S.set.holidays.includes(v)){S.set.holidays.push(v);save();render()}},
   delhol(a,e){e.preventDefault();S.set.holidays=S.set.holidays.filter(h=>h!==a.dataset.id);save();render()},
   restoretxt(){restore($('#restoretxt').value)},
@@ -63,6 +75,8 @@ Object.assign(ACT,{
 });
 Object.assign(BIND,{
   shiftf(t){S.set.shifts[+t.dataset.i][t.dataset.k]=t.value;save()},
+  shiftn(t){S.set.shifts[+t.dataset.i][t.dataset.k]=Math.max(0,+t.value||0);save()},
+  shiftm(t){S.set.shifts[+t.dataset.i][t.dataset.k]=t.value;save();render()},
   shiftrot(t){S.set.shifts[+t.dataset.i].rot=t.checked;save()},
   setn(t){S.set[t.dataset.k]=Math.max(0,+t.value||0);save()},
   sat(t){S.set.sat=t.checked;save()},

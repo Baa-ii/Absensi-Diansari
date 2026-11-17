@@ -129,7 +129,7 @@ function applyImport(){
   r.groups.forEach((g,k)=>{
     const id=k.split('|')[0],e=EM.get(id),old=S.att[k]||{},rec={...old,in:fromMin(g.a%1440),out:fromMin(g.b%1440),n:g.n,im:iid};
     if(g.b>=1440)rec.nd=1;else delete rec.nd;
-    if(e&&e.sched==='bergilir'){const det=detectShift(g.a%1440);rec.sh=det.id;rec.un=det.dist>120?1:0}else{delete rec.sh;delete rec.un}
+    if(e&&e.sched==='bergilir'){const det=detectShift(g.a%1440,k.split('|')[1]);rec.sh=det.id;rec.un=det.dist>120?1:0}else{delete rec.sh;delete rec.un}
     S.att[k]=rec;
   });
   (S.imports=S.imports||[]).unshift({id:iid,file:ui.imp.file,at:new Date().toLocaleString('id-ID'),rows:r.valid,days:r.groups.size,newEmps:newE,newIds});

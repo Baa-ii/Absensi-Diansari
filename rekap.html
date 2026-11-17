@@ -28,12 +28,12 @@ LST.rekap=()=>{
   const RD=rangeDays();
   const rows=S.emps.filter(matchQ).map(e=>({e,o:recap(e,RD)})).filter(({e,o})=>!e.off||o.hadir+o.izin+o.inc>0);
   const tot=rows.reduce((a,r)=>a+r.o.otMin,0),amt=rows.reduce((a,r)=>a+r.o.amt,0),sl=rows.slice(ui.page*PS,(ui.page+1)*PS);
-  return `<div class="pager top"><span>${fmtDate(ui.from)} sampai ${fmtDate(ui.to)} (${RD.length} hari) · ${rows.length} karyawan · lembur dibayar <b class="num">${fmtH(tot)}</b> jam · estimasi <b class="num">${rp(amt)}</b></span></div>
-  <div class="scroll"><table><thead><tr><th>Karyawan</th><th>Gaji</th><th class="n">Hadir</th><th class="n">Telat</th><th class="n">Izin/Sakit/Cuti</th><th class="n">Alpa</th><th class="n">Tdk lengkap</th><th class="n">Lembur (jam)</th><th class="n">Estimasi lembur</th></tr></thead>
+  return `<div class="pager top"><span>${fmtDate(ui.from)} sampai ${fmtDate(ui.to)} (${RD.length} hari) · ${rows.length} karyawan · lembur dibayar <b class="num">${fmtH(tot)}</b> jam · estimasi <b class="num">${rp(amt)}</b> · tunjangan shift <b class="num">${rp(rows.reduce((a,r)=>a+r.o.tj,0))}</b></span></div>
+  <div class="scroll"><table><thead><tr><th>Karyawan</th><th>Gaji</th><th class="n">Hadir</th><th class="n">Telat</th><th class="n">Izin/Sakit/Cuti</th><th class="n">Alpa</th><th class="n">Tdk lengkap</th><th class="n">Lembur (jam)</th><th class="n">Estimasi lembur</th><th class="n">Tunjangan shift</th></tr></thead>
   <tbody>${sl.map(({e,o})=>`<tr class="click" data-act="open" data-id="${esc(e.id)}"><td><b>${esc(e.name)}</b>${e.off?' <span class="pill">nonaktif</span>':''}${o.un?` <span class="pill warn" title="Shift hari-hari ini perlu dicek">${o.un} shift perlu cek</span>`:''}<br><span class="muted">${esc(e.id)} · ${esc(e.dept)}${e.pos?' · '+esc(e.pos):''}</span></td><td><span class="pill">${esc(e.pay)}</span></td>
     <td class="n">${o.hadir}</td><td class="n ${o.telat?'':'dim'}">${o.telat}</td><td class="n ${o.izin?'':'dim'}">${o.izin}</td>
     <td class="n" style="${o.alpa?'color:var(--bad)':'color:var(--muted)'}">${o.alpa}${o.noscan?` <span class="muted" title="Hari tanpa scan karyawan bergilir (jadwal belum diketahui)">+${o.noscan}</span>`:''}</td><td class="n ${o.inc?'':'dim'}">${o.inc}</td>
-    <td class="n">${o.otMin?fmtH(o.otMin):'<span class="muted">0</span>'}${o.noSpl?` <span class="pill warn" title="Lembur tanpa SPL">${o.noSpl} tanpa SPL</span>`:''}</td><td class="n ${o.amt?'':'dim'}">${o.amt?rp(o.amt):'0'}</td></tr>`).join('')||'<tr><td colspan="9" class="empty">Tidak ada data.</td></tr>'}</tbody></table></div>${pager(rows.length)}`;
+    <td class="n">${o.otMin?fmtH(o.otMin):'<span class="muted">0</span>'}${o.noSpl?` <span class="pill warn" title="Lembur tanpa SPL">${o.noSpl} tanpa SPL</span>`:''}</td><td class="n ${o.amt?'':'dim'}">${o.amt?rp(o.amt):'0'}</td><td class="n ${o.tj?'':'dim'}" title="Tunjangan shift per hari masuk (dari menu Shift)">${o.tj?rp(o.tj):'0'}</td></tr>`).join('')||'<tr><td colspan="10" class="empty">Tidak ada data.</td></tr>'}</tbody></table></div>${pager(rows.length)}`;
 };
 const hcount=()=>{const f=ui.hf,t=ui.ht;let n=0;const s=new Set();Object.keys(S.att).forEach(k=>{const[i,d]=k.split('|');if(d>=f&&d<=t){n++;s.add(i)}});return[n,s.size]};
 const hshow=()=>{const[n,e]=hcount(),el=$('#hcnt');if(el)el.innerHTML=`<b>${n}</b> catatan absensi dari <b>${e}</b> karyawan akan dihapus.`;ui.hn=n;const b=$('#del-go');if(b)b.disabled=!(n>0&&$('#dz-conf').value.trim()==='HAPUS')};
@@ -46,8 +46,8 @@ ACT.delrange=()=>{ui.hf=ui.from;ui.ht=ui.to;
 BIND.hf=t=>{ui.hf=t.value;hshow()};BIND.ht=t=>{ui.ht=t.value;hshow()};BIND.delconf=()=>hshow();
 ACT.delrangego=()=>{const f=ui.hf,t=ui.ht;let n=0;Object.keys(S.att).forEach(k=>{const d=k.split('|')[1];if(d>=f&&d<=t){delete S.att[k];n++}});save();layer().innerHTML='';render();toast(`${n} catatan absensi dihapus`)};
 ACT.copyrekap=()=>{const RD=rangeDays(),rows=S.emps.filter(matchQ).map(e=>({e,o:recap(e,RD)})).filter(({e,o})=>!e.off||o.hadir+o.izin+o.inc>0);
-  const h=['ID','Nama','Departemen','Jabatan','Kelompok gaji','Tarif/jam','Hadir','Telat','Izin/Sakit/Cuti','Alpa','Tanpa scan','Tidak lengkap','Lembur (jam)','Estimasi lembur (Rp)'];
-  copyText([`Periode\t${ui.from}\t${ui.to}`,h.join('\t'),...rows.map(({e,o})=>[e.id,e.name,e.dept,e.pos,e.pay,rateOf(e),o.hadir,o.telat,o.izin,o.alpa,o.noscan,o.inc,fmtH(o.otMin),Math.round(o.amt)].join('\t'))].join('\n'),'Tersalin, tempel di Excel')};
+  const h=['ID','Nama','Departemen','Jabatan','Kelompok gaji','Tarif/jam','Hadir','Telat','Izin/Sakit/Cuti','Alpa','Tanpa scan','Tidak lengkap','Lembur (jam)','Estimasi lembur (Rp)','Tunjangan shift (Rp)'];
+  copyText([`Periode\t${ui.from}\t${ui.to}`,h.join('\t'),...rows.map(({e,o})=>[e.id,e.name,e.dept,e.pos,e.pay,rateOf(e),o.hadir,o.telat,o.izin,o.alpa,o.noscan,o.inc,fmtH(o.otMin),Math.round(o.amt),Math.round(o.tj)].join('\t'))].join('\n'),'Tersalin, tempel di Excel')};
 boot({view:'rekap',need:NEED});
 
 </script>
