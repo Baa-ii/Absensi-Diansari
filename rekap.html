@@ -23,7 +23,7 @@
 <script>
 const NEED={data:'1.1',layout:'1.1'};
 V.rekap=()=>tb('Rekap & tarikan',rangeCtl(),'Pilih rentang tanggal untuk menarik data gaji mingguan, 2 mingguan atau bulanan. Nominal lembur adalah estimasi untuk dicek bagian penggajian.')+
-  `<section class="panel"><div class="tools" style="padding:12px 14px;border-bottom:1px solid var(--line)"><select data-bind="pay" id="paysel">${payOpts(ui.pay)}</select><select data-bind="dept" id="deptsel">${deptOpts(ui.dept)}</select><input type="text" id="q" data-bind="q" placeholder="Cari nama, ID, jabatan" value="${esc(ui.q)}"><span style="flex:1"></span><button class="btn" data-act="copyrekap">Salin untuk Excel</button></div><div id="list">${LST.rekap()}</div></section>`;
+  `<section class="panel"><div class="tools" style="padding:12px 14px;border-bottom:1px solid var(--line)"><select data-bind="pay" id="paysel">${payOpts(ui.pay)}</select><select data-bind="dept" id="deptsel">${deptOpts(ui.dept)}</select><input type="text" id="q" data-bind="q" placeholder="Cari nama, ID, jabatan" value="${esc(ui.q)}"><span style="flex:1"></span><button class="btn" data-act="copyrekap">Salin untuk Excel</button><button class="btn bad" data-act="delrange">Hapus absensi…</button></div><div id="list">${LST.rekap()}</div></section>`;
 LST.rekap=()=>{
   const RD=rangeDays();
   const rows=S.emps.filter(matchQ).map(e=>({e,o:recap(e,RD)})).filter(({e,o})=>!e.off||o.hadir+o.izin+o.inc>0);
@@ -35,6 +35,16 @@ LST.rekap=()=>{
     <td class="n" style="${o.alpa?'color:var(--bad)':'color:var(--muted)'}">${o.alpa}${o.noscan?` <span class="muted" title="Hari tanpa scan karyawan bergilir (jadwal belum diketahui)">+${o.noscan}</span>`:''}</td><td class="n ${o.inc?'':'dim'}">${o.inc}</td>
     <td class="n">${o.otMin?fmtH(o.otMin):'<span class="muted">0</span>'}${o.noSpl?` <span class="pill warn" title="Lembur tanpa SPL">${o.noSpl} tanpa SPL</span>`:''}</td><td class="n ${o.amt?'':'dim'}">${o.amt?rp(o.amt):'0'}</td></tr>`).join('')||'<tr><td colspan="9" class="empty">Tidak ada data.</td></tr>'}</tbody></table></div>${pager(rows.length)}`;
 };
+const hcount=()=>{const f=ui.hf,t=ui.ht;let n=0;const s=new Set();Object.keys(S.att).forEach(k=>{const[i,d]=k.split('|');if(d>=f&&d<=t){n++;s.add(i)}});return[n,s.size]};
+const hshow=()=>{const[n,e]=hcount(),el=$('#hcnt');if(el)el.innerHTML=`<b>${n}</b> catatan absensi dari <b>${e}</b> karyawan akan dihapus.`;ui.hn=n;const b=$('#del-go');if(b)b.disabled=!(n>0&&$('#dz-conf').value.trim()==='HAPUS')};
+ACT.delrange=()=>{ui.hf=ui.from;ui.ht=ui.to;
+  modal(`<div class="tb" style="padding:0"><h1>Hapus absensi per tanggal</h1></div><p style="color:var(--muted);font-size:14px">Menghapus jam scan, status manual dan catatan absensi pada rentang tanggal. Data karyawan dan SPL tidak ikut terhapus.</p>
+  <div class="tools"><label class="f">Dari<input type="date" value="${ui.hf}" data-bind="hf"></label><label class="f">Sampai<input type="date" value="${ui.ht}" data-bind="ht"></label></div>
+  <p id="hcnt" style="font-size:14px"></p>
+  <label class="f">Ketik HAPUS untuk melanjutkan<input type="text" id="dz-conf" data-bind="delconf" autocomplete="off"></label>
+  <div class="tools" style="justify-content:flex-end"><button class="btn" data-act="closemodal">Batal</button><button class="btn bad" id="del-go" data-act="delrangego" disabled>Hapus absensi</button></div>`);hshow()};
+BIND.hf=t=>{ui.hf=t.value;hshow()};BIND.ht=t=>{ui.ht=t.value;hshow()};BIND.delconf=()=>hshow();
+ACT.delrangego=()=>{const f=ui.hf,t=ui.ht;let n=0;Object.keys(S.att).forEach(k=>{const d=k.split('|')[1];if(d>=f&&d<=t){delete S.att[k];n++}});save();layer().innerHTML='';render();toast(`${n} catatan absensi dihapus`)};
 ACT.copyrekap=()=>{const RD=rangeDays(),rows=S.emps.filter(matchQ).map(e=>({e,o:recap(e,RD)})).filter(({e,o})=>!e.off||o.hadir+o.izin+o.inc>0);
   const h=['ID','Nama','Departemen','Jabatan','Kelompok gaji','Tarif/jam','Hadir','Telat','Izin/Sakit/Cuti','Alpa','Tanpa scan','Tidak lengkap','Lembur (jam)','Estimasi lembur (Rp)'];
   copyText([`Periode\t${ui.from}\t${ui.to}`,h.join('\t'),...rows.map(({e,o})=>[e.id,e.name,e.dept,e.pos,e.pay,rateOf(e),o.hadir,o.telat,o.izin,o.alpa,o.noscan,o.inc,fmtH(o.otMin),Math.round(o.amt)].join('\t'))].join('\n'),'Tersalin, tempel di Excel')};

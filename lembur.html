@@ -37,7 +37,7 @@ LST.lembur=()=>{
   return `<div class="scroll"><table><thead><tr><th>Nomor</th><th>Tanggal shift</th><th>Jam</th><th>Departemen</th><th class="n">Orang</th><th class="n">Biaya maks.</th><th>Pekerjaan</th><th>Status</th><th></th></tr></thead><tbody>
   ${sl.map(s=>`<tr><td class="mono">${esc(s.id)}${s.ed?` <span class="pill" title="Diubah ${esc(s.ed)}">diubah</span>`:''}${s.by?`<br><span class="muted" style="font-family:var(--ui)">oleh ${esc(s.by)}</span>`:''}</td><td>${fmtDate(s.date)}</td><td class="n">${s.start}\u2013${s.end}</td><td>${esc(s.dept||'\u2014')}</td><td class="n">${s.emps.length}</td><td class="n">${rp(splCost(s,EM))}</td><td>${esc(s.reason)}${s.note?`<br><span class="muted">${esc(s.note)}</span>`:''}</td>
     <td><span class="pill ${s.status==='Disetujui'?'good':s.status==='Dibatalkan'?'bad':'warn'}">${s.status}</span></td>
-    <td><span class="tools" style="flex-wrap:nowrap">${s.status==='Disetujui'?`<button class="btn sm" data-act="editspl" data-id="${esc(s.id)}">Edit</button><button class="btn sm bad" data-act="cancelspl" data-id="${esc(s.id)}">${ui.cx===s.id?'Yakin batalkan?':'Batalkan'}</button>`:`<button class="btn sm" data-act="restorespl" data-id="${esc(s.id)}">Aktifkan lagi</button>`}<button class="btn sm" data-act="viewspl" data-id="${esc(s.id)}">Lihat</button></span></td></tr>`).join('')||'<tr><td colspan="9" class="empty">Belum ada SPL di bagian ini.</td></tr>'}</tbody>
+    <td><span class="tools" style="flex-wrap:nowrap">${s.status==='Disetujui'?`<button class="btn sm" data-act="editspl" data-id="${esc(s.id)}">Edit</button><button class="btn sm bad" data-act="cancelspl" data-id="${esc(s.id)}">${ui.cx===s.id?'Yakin batalkan?':'Batalkan'}</button>`:`<button class="btn sm" data-act="restorespl" data-id="${esc(s.id)}">Aktifkan lagi</button>`}<button class="btn sm" data-act="viewspl" data-id="${esc(s.id)}">Lihat</button><button class="btn sm bad" data-act="delspl" data-id="${esc(s.id)}">${ui.dx===s.id?'Yakin hapus?':'Hapus'}</button></span></td></tr>`).join('')||'<tr><td colspan="9" class="empty">Belum ada SPL di bagian ini.</td></tr>'}</tbody>
   ${rows.length?`<tfoot><tr><td colspan="5"><b>Total ${ui.splTab==='Dibatalkan'?'SPL dibatalkan':'SPL aktif'}</b> <span class="muted">(semua halaman sesuai filter)</span></td><td class="n"><b>${rp(tot)}</b></td><td colspan="3"></td></tr></tfoot>`:''}</table></div>${spager(rows.length)}`;
 };
 function numFmt(ws,cols){const r=XLSX.utils.decode_range(ws['!ref']);for(let R=1;R<=r.e.r;R++)cols.forEach(C=>{const c=ws[XLSX.utils.encode_cell({r:R,c:C})];if(c&&c.t==='n')c.z='#,##0'})}
@@ -100,6 +100,11 @@ function subKey(){const h=location.hash.slice(1);ui.splTab=SUBS[h]||'Semua';retu
 Object.assign(ACT,{
   editspl(a){newSplModal(a.dataset.id)},
   cancelspl(a){const id=a.dataset.id;if(ui.cx!==id){ui.cx=id;refresh();return}ui.cx=null;S.spl.find(x=>x.id===id).status='Dibatalkan';save();render();toast('SPL dibatalkan')},
+  async delspl(a){const id=a.dataset.id;if(ui.dx!==id){ui.dx=id;ui.cx=null;refresh();return}ui.dx=null;
+    const s=S.spl.find(x=>x.id===id);if(!s)return;
+    if(s.cloudId){if(!(window.Cloud&&Cloud.deleteSpl)){toast('Tidak bisa terhubung ke server');refresh();return}
+      try{await Cloud.deleteSpl(s.cloudId)}catch(e){toast('Gagal menghapus di server: '+((e&&e.message)||'coba lagi'));refresh();return}}
+    S.spl=S.spl.filter(x=>x.id!==id);save();render();toast('SPL dihapus'+(s.cloudId?' (termasuk di server)':''))},
   restorespl(a){S.spl.find(x=>x.id===a.dataset.id).status='Disetujui';save();render();toast('SPL diaktifkan lagi')},
   splreset(){ui.sf='';ui.st='';ui.sby='';ui.ss='new';ui.page=0;render()},
   newspl(){newSplModal()},savespl(){saveSpl()},

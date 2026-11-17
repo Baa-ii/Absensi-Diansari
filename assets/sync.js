@@ -5,7 +5,7 @@
 if(typeof boot==='undefined'||typeof S==='undefined'||!window.Cloud)return;
 const CK='absensi-sync-at',MARGIN=600000;
 const _boot=boot;
-let SH=new Map(),lastAt=0,synced=false,dirty=false,busy=false,timer=null,failed=false,queue=[],rr=false,userName='';
+let SH=new Map(),mine=new Set(),lastAt=0,synced=false,dirty=false,busy=false,timer=null,failed=false,queue=[],rr=false,userName='';
 const SKIP=new Set(['emps','att','spl']);
 
 /* ---------- bentuk data ---------- */
@@ -42,7 +42,8 @@ async function flush(){
     });
     SH.forEach((sh,id)=>{if(!cur.has(id)&&sh.size)ops.push({id,set:{},del:[...sh.keys()]})});
     if(ops.length){
-      const at=await Cloud.dCommit(ops);lastAt=Math.max(lastAt,at);
+      const at=await Cloud.dCommit(ops);lastAt=Math.max(lastAt,at);mine.add(at);
+      {const wid=new Set(ops.map(o=>o.id));queue=queue.filter(d=>!(wid.has(d.id)&&((d.data&&d.data.at)||0)<=at))} /* buang salinan usang dari doc yang baru kita tulis */
       ops.forEach(o=>{let sh=SH.get(o.id);if(!sh)SH.set(o.id,sh=new Map());
         Object.keys(o.set).forEach(k=>sh.set(k,cur.get(o.id).get(k).j));o.del.forEach(k=>sh.delete(k))});
     }
@@ -65,6 +66,7 @@ function apply(docs){
   docs.forEach(d=>{
     if(d.pending)return;
     const m=(d.data&&d.data.m)||{};lastAt=Math.max(lastAt,(d.data&&d.data.at)||0);
+    if(mine.has(d.data&&d.data.at))return; /* gema tulisan sendiri, bisa usang */
     const sh=new Map();Object.keys(m).forEach(k=>sh.set(k,cj(m[k])));
     const old=SH.get(d.id);
     if(old&&old.size===sh.size&&[...sh].every(([k,j])=>old.get(k)===j))return;

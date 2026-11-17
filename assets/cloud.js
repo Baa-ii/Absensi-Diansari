@@ -88,6 +88,10 @@
     return wrap(async()=>{const {fs}=await load();await fs.updateDoc(fs.doc(db,'spl',id),{imported:true,localId})});
   }
 
+  async function deleteSpl(id){
+    return wrap(async()=>{const {fs}=await load();await fs.deleteDoc(fs.doc(db,'spl',id))});
+  }
+
   /* ---- data bersama admin: koleksi 'd', tiap dokumen {m:{kunci:nilai}, at:ms} ---- */
   async function dGet(id){
     return wrap(async()=>{const {fs}=await load();const s=await fs.getDoc(fs.doc(db,'d',id));return s.exists()?s.data():null});
@@ -116,5 +120,5 @@
       }
       return now});
   }
-  window.Cloud={dGet,dSince,dListen,dCommit,ready,login,logout,me,employees,pushEmployees,getAkses,setAkses,addSpl,mySpl,pending,since,markImported,cap};
+  window.Cloud={dGet,dSince,dListen,dCommit,ready,login,logout,me,employees,pushEmployees,getAkses,setAkses,addSpl,mySpl,pending,since,markImported,deleteSpl,cap};
 })();

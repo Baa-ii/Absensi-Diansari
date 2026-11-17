@@ -29,7 +29,7 @@ V.impor=()=>{
   `<label class="drop" id="drop" for="file"><b>Tarik file ke sini atau klik untuk memilih</b>Data di tanggal yang sama diperbarui, status manual tetap aman. Shift malam dan bergilir dikenali otomatis dari jam scan.</label>
   <input type="file" id="file" accept=".xlsx,.xls,.csv,.txt,.dat" hidden>
   <div id="impbox">${impBox()}</div>
-  ${last?`<section class="panel"><div class="ph"><h2>Impor terakhir</h2></div><div class="item"><div class="t"><b>${esc(last.file)}</b><span>${last.at} · ${last.rows} scan · ${last.days} hari-orang · ${last.newEmps} karyawan baru</span></div></div></section>`:''}`;
+  ${(S.imports||[]).length?`<section class="panel"><div class="ph"><h2>Riwayat impor</h2></div>${(S.imports||[]).slice(0,8).map(m=>`<div class="item"><div class="t"><b>${esc(m.file)}</b><span>${esc(m.at)} · ${m.rows} scan · ${m.days} hari-orang · ${m.newEmps} karyawan baru</span></div>${m.id?`<button class="btn sm bad" data-act="delimp" data-id="${esc(m.id)}">Hapus</button>`:`<span class="muted" style="font-size:12px">impor lama: hapus lewat Rekap</span>`}</div>`).join('')}</section>`:''}`;
 };
 function impBox(){
   const im=ui.imp;if(!im)return '';
@@ -121,22 +121,33 @@ async function handleFile(f){
   $('#impbox').innerHTML=impBox();
 }
 function applyImport(){
-  const r=ui.imp.res;let newE=0;
-  r.ids.forEach(id=>{if(!S.emps.find(e=>e.id===id)){S.emps.push({id,nip:r.nips[id]||'',name:r.names[id]||'Karyawan '+id,dept:r.depts[id]||'Belum diatur',pos:r.poss[id]||'',sched:r.auto.has(id)?'bergilir':'tetap',shift:S.set.shifts[0].id,pay:'Bulanan',rate:0,ot:false,off:false});newE++}});
+  const r=ui.imp.res;let newE=0;const iid='i'+Date.now().toString(36),newIds=[];
+  r.ids.forEach(id=>{if(!S.emps.find(e=>e.id===id)){S.emps.push({id,nip:r.nips[id]||'',name:r.names[id]||'Karyawan '+id,dept:r.depts[id]||'Belum diatur',pos:r.poss[id]||'',sched:r.auto.has(id)?'bergilir':'tetap',shift:S.set.shifts[0].id,pay:'Bulanan',rate:0,ot:false,off:false});newE++;newIds.push(id)}});
   let depN=0;S.emps.forEach(e=>{if(r.nips[e.id])e.nip=r.nips[e.id];const d=r.depts[e.id];if(d&&e.dept!==d){e.dept=d;depN++}const j=r.poss[e.id];if(j&&e.pos!==j)e.pos=j});
   let fixN=0;S.emps.forEach(e=>{const nm=r.names[e.id];if(nm&&(!e.name||e.name==='Karyawan '+e.id)){e.name=nm;fixN++}});
   const EM=EMap();
   r.groups.forEach((g,k)=>{
-    const id=k.split('|')[0],e=EM.get(id),old=S.att[k]||{},rec={...old,in:fromMin(g.a%1440),out:fromMin(g.b%1440),n:g.n};
+    const id=k.split('|')[0],e=EM.get(id),old=S.att[k]||{},rec={...old,in:fromMin(g.a%1440),out:fromMin(g.b%1440),n:g.n,im:iid};
     if(g.b>=1440)rec.nd=1;else delete rec.nd;
     if(e&&e.sched==='bergilir'){const det=detectShift(g.a%1440);rec.sh=det.id;rec.un=det.dist>120?1:0}else{delete rec.sh;delete rec.un}
     S.att[k]=rec;
   });
-  (S.imports=S.imports||[]).unshift({file:ui.imp.file,at:new Date().toLocaleString('id-ID'),rows:r.valid,days:r.groups.size,newEmps:newE});
+  (S.imports=S.imports||[]).unshift({id:iid,file:ui.imp.file,at:new Date().toLocaleString('id-ID'),rows:r.valid,days:r.groups.size,newEmps:newE,newIds});
   ui.day=r.max;ui.from=r.max.slice(0,7)+'-01';ui.to=r.max;S.emps.sort((a,b)=>a.id.localeCompare(b.id,undefined,{numeric:true}));
   save();ui.imp=null;render();toast(`Impor selesai: ${r.groups.size} hari-orang${fixN?', '+fixN+' nama diperbarui':''}${depN?', '+depN+' departemen diisi':''}`);
 }
 ACT.applyimp=()=>applyImport();
+ACT.delimp=a=>{const m=(S.imports||[]).find(x=>x.id===a.dataset.id);if(!m)return;ui.dimp=m.id;
+  const n=Object.keys(S.att).filter(k=>S.att[k].im===m.id).length;
+  modal(`<div class="tb" style="padding:0"><h1>Hapus impor ini?</h1></div><p style="color:var(--muted);font-size:14px">File <b>${esc(m.file)}</b> (${esc(m.at)}). Jam scan dari impor ini dihapus: <b>${n}</b> hari-orang. Status manual (izin, dll) tetap. Jika tanggal yang sama pernah diimpor sebelumnya, jam lamanya ikut hilang, impor ulang file lama bila perlu.</p>
+  ${(m.newIds||[]).length?`<label class="f" style="flex-direction:row;gap:8px;align-items:center"><input type="checkbox" id="dimp-emp" checked> Hapus juga ${(m.newIds||[]).length} karyawan baru dari impor ini (jika tidak punya absensi lain)</label>`:''}
+  <label class="f">Ketik HAPUS untuk melanjutkan<input type="text" id="dz-conf" data-bind="delconf" autocomplete="off"></label>
+  <div class="tools" style="justify-content:flex-end"><button class="btn" data-act="closemodal">Batal</button><button class="btn bad" id="del-go" data-act="delimpgo" disabled>Hapus impor</button></div>`)};
+BIND.delconf=t=>{$('#del-go').disabled=t.value.trim()!=='HAPUS'};
+ACT.delimpgo=()=>{const id=ui.dimp,m=(S.imports||[]).find(x=>x.id===id);if(!m)return;let n=0;
+  Object.keys(S.att).forEach(k=>{const r=S.att[k];if(r.im!==id)return;n++;['in','out','n','nd','sh','un','im'].forEach(f=>delete r[f]);if(!Object.keys(r).length)delete S.att[k]});
+  let en=0;const cb=$('#dimp-emp');if(cb&&cb.checked)(m.newIds||[]).forEach(eid=>{if(!Object.keys(S.att).some(k=>k.split('|')[0]===eid)){const i=S.emps.findIndex(e=>e.id===eid);if(i>=0){S.emps.splice(i,1);en++}}});
+  S.imports=S.imports.filter(x=>x.id!==id);ui.dimp=null;save();layer().innerHTML='';render();toast(`Impor dihapus: ${n} hari-orang${en?', '+en+' karyawan':''}`)};
 ACT.cancelimp=()=>{ui.imp=null;$('#impbox').innerHTML=''};
 BIND.map=t=>{ui.imp.map[t.dataset.k]=+t.value;analyze();$('#impbox').innerHTML=impBox()};
 boot({view:'impor',need:NEED,after:()=>wireDrop('#drop','#file',handleFile)});
