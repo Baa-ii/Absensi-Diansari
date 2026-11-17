@@ -5,7 +5,7 @@
 if(typeof boot==='undefined'||typeof S==='undefined'||!window.Cloud)return;
 const CK='absensi-sync-at',MARGIN=600000;
 const _boot=boot;
-let SH=new Map(),mine=new Set(),lastAt=0,synced=false,dirty=false,busy=false,timer=null,failed=false,queue=[],rr=false,userName='';
+let unsub=null,leaving=false,SH=new Map(),mine=new Set(),lastAt=0,synced=false,dirty=false,busy=false,timer=null,failed=false,queue=[],rr=false,userName='';
 const SKIP=new Set(['emps','att','spl']);
 
 /* ---------- bentuk data ---------- */
@@ -189,12 +189,14 @@ function clearCache(){try{sessionStorage.removeItem(CK);sessionStorage.removeIte
 let idleOn=false;
 function startIdle(){
   if(idleOn||!window.Idle)return;idleOn=true;
-  Idle.start(async()=>{try{if(dirty||busy||timer)await flush()}catch(e){}try{await Cloud.logout()}catch(e){}clearCache()});
+  Idle.start(async()=>{try{if(dirty||busy||timer)await flush()}catch(e){}stopListen();try{await Cloud.logout()}catch(e){}clearCache()});
 }
 let PM='';
+function stopListen(){leaving=true;try{if(typeof unsub==='function')unsub()}catch(e){}unsub=null}
 async function logoutNow(){
   if(busy||dirty||timer){await flush()}
   if(failed||dirty){if(!confirm('Ada perubahan yang belum tersimpan ke server. Tetap keluar?'))return}
+  stopListen();
   try{await Cloud.logout()}catch(x){}
   clearCache();
   location.reload();
@@ -224,7 +226,7 @@ async function bg(cfg){
     if(apply(docs))rerender();
   }catch(e){stat('err',e.message);setTimeout(()=>bg(cfg),15000);return}
   synced=true;stat(dirty?'wait':'ok');startIdle();
-  try{await Cloud.dListen(Math.max(0,lastAt-MARGIN),docs=>{queue.push(...docs);drain()},e=>stat('err',e.message))}catch(e){}
+  try{unsub=await Cloud.dListen(Math.max(0,lastAt-MARGIN),docs=>{queue.push(...docs);drain()},e=>{if(!leaving)stat('err',e.message)})}catch(e){}
   if(dirty)flush();
 }
 async function start(cfg){
@@ -260,7 +262,7 @@ async function loadAll(cfg,m){
     }
   }catch(e){return failView(cfg,e.message)}
   synced=true;startIdle();hideOv();_boot(cfg);wireHeader();stat(failed?'err':'ok');
-  try{await Cloud.dListen(Math.max(0,lastAt-MARGIN),docs=>{queue.push(...docs);drain()},e=>stat('err',e.message))}catch(e){}
+  try{unsub=await Cloud.dListen(Math.max(0,lastAt-MARGIN),docs=>{queue.push(...docs);drain()},e=>{if(!leaving)stat('err',e.message)})}catch(e){}
 }
 
 /* ---------- pasang ---------- */
