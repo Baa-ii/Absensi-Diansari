@@ -29,8 +29,9 @@ function migrate(s){
   if(!s.set.v2){s.set.sat=true;s.set.v2=1}
   if(s.set.rate==null)s.set.rate=24000;
   s.set.holidays=s.set.holidays||[];
+  s.set.vendors=Array.isArray(s.set.vendors)?s.set.vendors:[];
   s.emps=s.emps||[];
-  s.emps.forEach(e=>{e.pos=e.pos||'';e.sched=e.sched||'tetap';e.pay=e.pay||'Bulanan';e.rate=+e.rate||0;e.off=!!e.off;e.ot=!!e.ot});
+  s.emps.forEach(e=>{e.pos=e.pos||'';e.sched=e.sched||'tetap';e.pay=e.pay||'Bulanan';e.rate=+e.rate||0;e.off=!!e.off;e.ot=!!e.ot;e.os=e.os||''});
   s.att=s.att||{};s.spl=s.spl||[];s.imports=s.imports||[];
   s.spl.forEach(x=>{if(x.status==='Diajukan')x.status='Disetujui';else if(x.status==='Ditolak')x.status='Dibatalkan'});
   return s;
@@ -154,7 +155,7 @@ const EMap=()=>new Map(S.emps.map(e=>[e.id,e]));
 function latest(){let m='';for(const k in S.att){const d=k.split('|')[1];if(d>m)m=d}return m||TODAY}
 const L0=latest();
 const UI_KEY='absensi-ui';
-const ui={view:'',day:L0,from:L0.slice(0,7)+'-01',to:L0,q:'',dept:'',pay:'',showOff:false,page:0,drawer:null,splTab:'Semua',setTab:'jam',imp:null,ie:null,confirm:false,cd:false,cx:null,sel:new Set()};
+const ui={view:'',day:L0,from:L0.slice(0,7)+'-01',to:L0,q:'',dept:'',pay:'',vend:'',showOff:false,page:0,drawer:null,splTab:'Semua',setTab:'jam',imp:null,ie:null,confirm:false,cd:false,cx:null,sel:new Set()};
 try{const j=JSON.parse(sessionStorage.getItem(UI_KEY)||'null');if(j)['day','from','to','showOff'].forEach(k=>{if(j[k]!=null)ui[k]=j[k]})}catch(e){}
 function saveUi(){try{sessionStorage.setItem(UI_KEY,JSON.stringify({day:ui.day,from:ui.from,to:ui.to,showOff:ui.showOff}))}catch(e){}}
 

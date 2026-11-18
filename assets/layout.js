@@ -13,11 +13,12 @@ const V={},LST={},ACT={},BIND={},PAGE={view:'',getSub:null,after:null,need:null}
 const depts=()=>[...new Set(S.emps.map(e=>e.dept))].sort();
 const PAYS=['Mingguan','2 mingguan','Bulanan'];
 const deptOpts=sel=>'<option value="">Semua departemen</option>'+depts().map(d=>`<option ${d===sel?'selected':''}>${esc(d)}</option>`).join('');
+const vendOpts=sel=>'<option value="">Semua penyedia</option><option value="_own" '+(sel==='_own'?'selected':'')+'>Karyawan sendiri</option>'+(S.set.vendors||[]).map(v=>`<option value="${esc(v)}" ${v===sel?'selected':''}>${esc(v)}</option>`).join('');
 const payOpts=sel=>'<option value="">Semua kelompok gaji</option>'+PAYS.map(d=>`<option ${d===sel?'selected':''}>${d}</option>`).join('');
 let PS=12;
 function pager(total,top){const pages=Math.max(1,Math.ceil(total/PS));if(ui.page>=pages)ui.page=pages-1;
   return `<div class="pager${top?' top':''}"><span>${total?ui.page*PS+1:0}–${Math.min(total,(ui.page+1)*PS)} dari ${total}</span><span class="tools"><button class="btn sm" data-act="prev" ${ui.page<=0?'disabled':''}>Sebelumnya</button><button class="btn sm" data-act="next" ${ui.page>=pages-1?'disabled':''}>Berikutnya</button></span></div>`}
-const matchQ=e=>(!ui.dept||e.dept===ui.dept)&&(!ui.pay||e.pay===ui.pay)&&(!ui.q||(e.name+' '+e.id+' '+e.pos).toLowerCase().includes(ui.q.toLowerCase()));
+const matchQ=e=>(!ui.dept||e.dept===ui.dept)&&(!ui.pay||e.pay===ui.pay)&&(!ui.vend||(ui.vend==='_own'?!e.os:e.os===ui.vend))&&(!ui.q||(e.name+' '+e.id+' '+e.pos).toLowerCase().includes(ui.q.toLowerCase()));
 const sw=(bind,id,on,extra='',label='')=>`<label class="sw"><input type="checkbox" data-bind="${bind}" data-id="${esc(id)}" ${extra} ${on?'checked':''} aria-label="${label}"><i></i></label>`;
 const tb=(title,right='',sub='')=>`<section class="panel tb"><div><h1>${title}</h1>${sub?`<p class="sub">${sub}</p>`:''}</div><div class="tools">${right}</div></section>`;
 const rangeCtl=()=>`<input type="date" id="from" data-bind="from" value="${ui.from}" aria-label="Dari tanggal"><span class="muted">sampai</span><input type="date" id="to" data-bind="to" value="${ui.to}" aria-label="Sampai tanggal"><select id="preset" data-bind="preset" aria-label="Pilih cepat"><option value="">Pilih cepat</option><option value="tw">Minggu ini</option><option value="lw">Minggu lalu (Sen–Min)</option><option value="14">14 hari terakhir</option><option value="cur">Bulan ini</option><option value="prev">Bulan lalu</option></select>`;
@@ -133,6 +134,7 @@ Object.assign(BIND,{
   q(t){ui.q=t.value;ui.page=0;refresh()},
   dept(t){ui.dept=t.value;ui.page=0;refresh()},
   pay(t){ui.pay=t.value;ui.page=0;refresh()},
+  vend(t){ui.vend=t.value;ui.page=0;refresh()},
   from(t){if(t.value){ui.from=t.value;if(ui.to<ui.from)ui.to=ui.from;ui.page=0;render()}},
   to(t){if(t.value){ui.to=t.value;if(ui.from>ui.to)ui.from=ui.to;ui.page=0;render()}},
   preset(t){const v=t.value,t0=pd(TODAY),mon=new Date(t0);mon.setDate(mon.getDate()-((mon.getDay()+6)%7));let f,end;
