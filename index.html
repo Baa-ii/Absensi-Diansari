@@ -27,9 +27,10 @@ V.ringkasan=()=>{
   if(!E.length)return tb('Ringkasan harian')+`<div class="panel empty">Belum ada data karyawan. Buka <a href="impor-karyawan.html">Impor karyawan</a> atau muat data contoh di <a href="pengaturan.html#data">Pengaturan</a>.</div>`;
   const ds=ui.day,rows=E.map(e=>({e,i:dayInfo(e,ds)})),c=k=>rows.filter(r=>r.i.status===k).length;
   const hadir=c('Hadir'),telat=c('Terlambat'),dinas=c('Dinas Luar'),izin=rows.filter(r=>['Izin','Sakit','Cuti'].includes(r.i.status)).length,alpa=c('Alpa'),inc=c('Tidak lengkap'),otN=rows.filter(r=>r.i.paid>0).length;
-  const hol=isHoliday(ds),ord={'Alpa':0,'Tidak lengkap':1,'Terlambat':2};
+  const hol=isHoliday(ds),ord={'Alpa':0,'Tanpa scan':1,'Tidak lengkap':2,'Terlambat':3};
   const attn=rows.filter(r=>r.i.status in ord).sort((a,b)=>ord[a.i.status]-ord[b.i.status]);
   ui.page=Math.max(0,Math.min(ui.page||0,Math.ceil(attn.length/PS)-1));
+  const nsDays=[];{const d=pd(TODAY);for(let k=0;k<14;k++){d.setDate(d.getDate()-1);nsDays.push(dstr(d))}}const nsN=noScanList(nsDays,()=>true).length;
   const pend=S.spl.filter(s=>s.status==='Disetujui'&&s.date===ds);
   return tb('Ringkasan harian',`<button class="btn" data-act="dayprev" aria-label="Hari sebelumnya">←</button><input type="date" id="daysel" data-bind="day" value="${ds}"><button class="btn" data-act="daynext" aria-label="Hari berikutnya">→</button>`,`${fmtDate(ds)}${hol?' · hari libur kantor':''} · ${E.length} karyawan aktif`)+
   `<div class="stats">
@@ -42,7 +43,8 @@ V.ringkasan=()=>{
   <div class="mix"><span class="mixt"><b>${Math.round((hadir+telat+dinas)/E.length*100)}%</b> hadir</span><div class="mixb" role="img" aria-label="Komposisi kehadiran hari ini">${[[hadir+dinas,'var(--good)','Hadir'],[telat,'var(--warn)','Terlambat'],[izin,'var(--muted)','Izin / sakit / cuti'],[alpa,'var(--bad)','Alpa'],[inc,'var(--warn-soft)','Scan tidak lengkap'],[Math.max(0,E.length-hadir-dinas-telat-izin-alpa-inc),'var(--line)','Lainnya']].map(x=>`<i style="flex:${x[0]};background:${x[1]}" title="${x[2]}: ${x[0]}"></i>`).join('')}</div></div>
   <div class="cols">
     <section class="panel"><div class="ph"><h2>Perlu perhatian</h2><span class="muted">${attn.length} orang</span></div>
-      <div class="list">${attn.slice(ui.page*PS,(ui.page+1)*PS).map(r=>`<div class="item" data-row><div class="t"><b>${esc(r.e.name)}</b><span>${esc(r.e.dept)} · ${r.i.r.in?r.i.r.in+' – '+(r.i.r.out&&r.i.r.n>1?r.i.r.out+(r.i.r.nd?' +1':''):'belum pulang'):'tidak ada scan'}${r.i.late?' · telat '+r.i.late+' mnt':''}</span></div><span class="pill ${pillCls(r.i.status)}">${r.i.status}</span></div>`).join('')||'<div class="empty">Tidak ada yang perlu ditindaklanjuti.</div>'}
+      <p class="sub" style="margin:0;padding:8px 18px;font-size:12px;line-height:1.5;color:var(--muted)">Daftar yang perlu dicek pada tanggal ini. <b>Alpa</b>: hari kerja tanpa scan (dipotong). <b>Tanpa scan</b>: karyawan bergilir, belum pasti alpa. <b>Tidak lengkap</b>: scan hanya sekali. <b>Terlambat</b>: masuk lewat toleransi. Klik baris untuk rincian harian.</p>${nsN?`<div class="item"><div class="t"><b>${nsN} hari tanpa scan belum dikonfirmasi</b><span>Karyawan bergilir, 14 hari terakhir. Konfirmasi di Rekap &amp; tarikan.</span></div><button class="btn sm" data-act="goto" data-href="rekap.html">Buka Rekap</button></div>`:''}
+      <div class="list">${attn.slice(ui.page*PS,(ui.page+1)*PS).map(r=>`<div class="item click" data-row data-act="open" data-id="${esc(r.e.id)}"><div class="t"><b>${esc(r.e.name)}</b><span>${esc(r.e.dept)} · ${r.i.r.in?r.i.r.in+' – '+(r.i.r.out&&r.i.r.n>1?r.i.r.out+(r.i.r.nd?' +1':''):'belum pulang'):'tidak ada scan'}${r.i.late?' · telat '+r.i.late+' mnt':''}</span></div><span class="pill ${pillCls(r.i.status)}">${r.i.status}</span></div>`).join('')||'<div class="empty">Tidak ada yang perlu ditindaklanjuti.</div>'}
 </div>${attn.length>PS?pager(attn.length):''}</section>
     <section class="panel"><div class="ph"><h2>SPL pada tanggal ini</h2><span class="muted">${pend.length}</span></div>
       <div class="list">${pend.map(s=>`<div class="item"><div class="t"><b>${fmtDate(s.date)} · ${s.start}–${s.end}</b><span>${esc(s.dept||'')} · ${s.emps.length} orang · ${esc(s.reason)}</span></div>

@@ -27,6 +27,7 @@ function migrate(s){
   s.set.shifts.forEach(x=>{if(x.rot==null)x.rot=x.id!=='reg'});
   s.set.shifts.forEach(x=>{if(x.sm==null){const d={pagi:['jam','07:00','12:00','ikut',0],siang:['jam','12:00','17:00','ikut',0],malam:['libur','07:00','12:00','libur',12000]}[x.id];x.sm=d?d[0]:'biasa';x.sa=d?d[1]:'07:00';x.sb=d?d[2]:'12:00';x.mm=d?d[3]:'biasa';x.tj=d?d[4]:0}});
   if(!s.set.v2){s.set.sat=true;s.set.v2=1}
+  if(s.set.pot==null)s.set.pot=20000;
   if(s.set.rate==null)s.set.rate=24000;
   s.set.holidays=s.set.holidays||[];
   s.set.vendors=Array.isArray(s.set.vendors)?s.set.vendors:[];
@@ -132,11 +133,14 @@ function dayInfo(e,ds){
     else if(!e.ot)flag='Tidak berhak lembur';
     else paid=Math.floor(Math.min(ot,dur(spl))/30)*30;
   }
+  const pot=status==='Alpa'?(+S.set.pot||0):0;
   let un=false;if(rot&&r.in&&!r.shov){const st=[toMin(sh.start)];if(dow===6&&sh.sm==='jam'&&sh.sa)st.push(toMin(sh.sa));un=Math.min(...st.map(m=>Math.abs(((inM-m+720)%1440+1440)%1440-720)))>120}
-  return {r,hol,sh,rot,wm,status,late,ot,spl,paid,flag,tj,un,amt:paid/60*rateOf(e)};
+  return {r,hol,sh,rot,wm,status,late,ot,spl,paid,flag,tj,pot,un,amt:paid/60*rateOf(e)};
 }
+/* hari kerja tanpa scan karyawan bergilir yang belum dikonfirmasi */
+function noScanList(days,pred){const out=[];S.emps.forEach(e=>{if(e.off||!pred(e))return;days.forEach(ds=>{if(dayInfo(e,ds).status==='Tanpa scan')out.push({e,ds})})});return out.sort((a,b)=>a.ds<b.ds?-1:a.ds>b.ds?1:a.e.name.localeCompare(b.e.name))}
 function recap(e,days){
-  const o={hadir:0,telat:0,izin:0,alpa:0,inc:0,noscan:0,un:0,otMin:0,amt:0,noSpl:0,tj:0};
+  const o={hadir:0,telat:0,izin:0,alpa:0,inc:0,noscan:0,un:0,otMin:0,amt:0,noSpl:0,tj:0,pot:0};
   days.forEach(ds=>{const i=dayInfo(e,ds);
     if(['Hadir','Terlambat','Dinas Luar'].includes(i.status))o.hadir++;
     if(i.status==='Terlambat')o.telat++;
@@ -145,7 +149,7 @@ function recap(e,days){
     if(i.status==='Tanpa scan')o.noscan++;
     if(i.status==='Tidak lengkap')o.inc++;
     if(i.un)o.un++;
-    o.otMin+=i.paid;o.amt+=i.amt;o.tj+=i.tj;if(i.flag==='Tanpa SPL')o.noSpl++;});
+    o.otMin+=i.paid;o.amt+=i.amt;o.tj+=i.tj;o.pot+=i.pot;if(i.flag==='Tanpa SPL')o.noSpl++;});
   return o;
 }
 const pillCls=s=>({'Hadir':'good','Terlambat':'warn','Tidak lengkap':'warn','Alpa':'bad','Izin':'info','Sakit':'info','Cuti':'info','Dinas Luar':'info'}[s]||'');
