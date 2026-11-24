@@ -132,7 +132,8 @@ function dayInfo(e,ds){
     else if(!e.ot)flag='Tidak berhak lembur';
     else paid=Math.floor(Math.min(ot,dur(spl))/30)*30;
   }
-  return {r,hol,sh,rot,wm,status,late,ot,spl,paid,flag,tj,un:rot&&!!r.un&&!r.shov,amt:paid/60*rateOf(e)};
+  let un=false;if(rot&&r.in&&!r.shov){const st=[toMin(sh.start)];if(dow===6&&sh.sm==='jam'&&sh.sa)st.push(toMin(sh.sa));un=Math.min(...st.map(m=>Math.abs(((inM-m+720)%1440+1440)%1440-720)))>120}
+  return {r,hol,sh,rot,wm,status,late,ot,spl,paid,flag,tj,un,amt:paid/60*rateOf(e)};
 }
 function recap(e,days){
   const o={hadir:0,telat:0,izin:0,alpa:0,inc:0,noscan:0,un:0,otMin:0,amt:0,noSpl:0,tj:0};
