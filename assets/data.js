@@ -13,7 +13,7 @@ const BULAN=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus',
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmtDate=ds=>{const d=pd(ds);return HARI[d.getDay()]+', '+d.getDate()+' '+BULAN[d.getMonth()].slice(0,3)+' '+d.getFullYear()};
 const fmtH=m=>m?(m/60).toFixed(1).replace('.',','):'0';
-const rp=n=>'Rp'+Math.round(n).toLocaleString('id-ID');
+const rp=n=>(n<0?'−':'')+'Rp'+Math.round(Math.abs(n)).toLocaleString('id-ID');
 const TODAY=dstr(new Date());
 const normId=x=>String(x??'').trim().replace(/^0+(?=\d)/,'');
 function rangeDays(){const out=[],b=pd(ui.to);for(let d=pd(ui.from),i=0;d<=b&&i<120;d.setDate(d.getDate()+1),i++)out.push(dstr(d));return out}
@@ -93,8 +93,10 @@ function isNight(sh){return toMin(sh.end)<=toMin(sh.start)}
 const dur=s=>(toMin(s.end)-toMin(s.start)+1440)%1440;
 const rateOf=e=>e&&e.rate>0?e.rate:S.set.rate;
 function isHoliday(ds){const dow=pd(ds).getDay();return S.set.holidays.includes(ds)||dow===0||(dow===6&&!S.set.sat)}
-function detectShift(t,ds){
-  let c=S.set.shifts.filter(s=>s.rot);if(!c.length)c=S.set.shifts;
+/* shift yang berlaku untuk sebuah departemen: shift milik departemen itu, kalau tidak ada pakai shift Umum */
+function shiftPool(dept){const rs=S.set.shifts.filter(s=>s.rot),own=dept?rs.filter(s=>s.dept===dept):[];if(own.length)return own;const gen=rs.filter(s=>!s.dept);return gen.length?gen:(rs.length?rs:S.set.shifts)}
+function detectShift(t,ds,e){
+  const c=shiftPool(e&&e.dept);
   let best=null;const sat=ds&&pd(ds).getDay()===6;
   c.forEach(s=>{const st=[toMin(s.start)];if(sat&&s.sm==='jam'&&s.sa)st.push(toMin(s.sa));
     st.forEach(m=>{const diff=Math.abs(((t-m+720)%1440+1440)%1440-720);if(!best||diff<best.dist)best={id:s.id,dist:diff}})});
@@ -104,7 +106,7 @@ function detectShift(t,ds){
 function satWorked(e,ds){const d=pd(ds);d.setDate(d.getDate()-1);const r=S.att[e.id+'|'+dstr(d)];return !!(r&&r.in)}
 function dayInfo(e,ds){
   const r=S.att[e.id+'|'+ds]||{},rot=e.sched==='bergilir',hol=rot?false:isHoliday(ds);
-  const sh=(rot&&S.set.shifts.find(x=>x.id===(r.shov||r.sh)))||shiftOf(e);
+  const sid=rot?(r.shov||(r.in&&toMin(r.in)!=null?detectShift(toMin(r.in),ds,e).id:r.sh)):null;const sh=(rot&&S.set.shifts.find(x=>x.id===sid))||shiftOf(e);
   const dow=pd(ds).getDay();
   /* mode hari: biasa | jam (Sabtu: jam biasa terbatas, sisanya lembur) | libur (masuk = lembur penuh) */
   let wm='biasa';
@@ -133,7 +135,7 @@ function dayInfo(e,ds){
     else if(!e.ot)flag='Tidak berhak lembur';
     else paid=Math.floor(Math.min(ot,dur(spl))/30)*30;
   }
-  const pot=status==='Alpa'?(+S.set.pot||0):0;
+  const pot=(status==='Tidak lengkap'&&ds<TODAY)?(+S.set.pot||0):0;
   let un=false;if(rot&&r.in&&!r.shov){const st=[toMin(sh.start)];if(dow===6&&sh.sm==='jam'&&sh.sa)st.push(toMin(sh.sa));un=Math.min(...st.map(m=>Math.abs(((inM-m+720)%1440+1440)%1440-720)))>120}
   return {r,hol,sh,rot,wm,status,late,ot,spl,paid,flag,tj,pot,un,amt:paid/60*rateOf(e)};
 }

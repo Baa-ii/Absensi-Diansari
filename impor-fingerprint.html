@@ -123,13 +123,13 @@ async function handleFile(f){
 function applyImport(){
   const r=ui.imp.res;let newE=0;const iid='i'+Date.now().toString(36),newIds=[];
   r.ids.forEach(id=>{if(!S.emps.find(e=>e.id===id)){S.emps.push({id,nip:r.nips[id]||'',name:r.names[id]||'Karyawan '+id,dept:r.depts[id]||'Belum diatur',pos:r.poss[id]||'',sched:r.auto.has(id)?'bergilir':'tetap',shift:S.set.shifts[0].id,pay:'Bulanan',rate:0,ot:false,off:false});newE++;newIds.push(id)}});
-  let depN=0;S.emps.forEach(e=>{if(r.nips[e.id])e.nip=r.nips[e.id];const d=r.depts[e.id];if(d&&e.dept!==d){e.dept=d;depN++}const j=r.poss[e.id];if(j&&e.pos!==j)e.pos=j});
+  let depN=0;S.emps.forEach(e=>{if(r.nips[e.id])e.nip=r.nips[e.id];const d=r.depts[e.id];if(d&&(!e.dept||e.dept==='Belum diatur')&&e.dept!==d){e.dept=d;depN++}const j=r.poss[e.id];if(j&&!e.pos)e.pos=j});
   let fixN=0;S.emps.forEach(e=>{const nm=r.names[e.id];if(nm&&(!e.name||e.name==='Karyawan '+e.id)){e.name=nm;fixN++}});
   const EM=EMap();
   r.groups.forEach((g,k)=>{
     const id=k.split('|')[0],e=EM.get(id),old=S.att[k]||{},rec={...old,in:fromMin(g.a%1440),out:fromMin(g.b%1440),n:g.n,im:iid};
     if(g.b>=1440)rec.nd=1;else delete rec.nd;
-    if(e&&e.sched==='bergilir'){const det=detectShift(g.a%1440,k.split('|')[1]);rec.sh=det.id;rec.un=det.dist>120?1:0}else{delete rec.sh;delete rec.un}
+    if(e&&e.sched==='bergilir'){const det=detectShift(g.a%1440,k.split('|')[1],e);rec.sh=det.id;rec.un=det.dist>120?1:0}else{delete rec.sh;delete rec.un}
     S.att[k]=rec;
   });
   (S.imports=S.imports||[]).unshift({id:iid,file:ui.imp.file,at:new Date().toLocaleString('id-ID'),rows:r.valid,days:r.groups.size,newEmps:newE,newIds});
