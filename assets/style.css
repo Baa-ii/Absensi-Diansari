@@ -201,3 +201,33 @@ label.f input,label.f select,label.f textarea{font-weight:400;color:var(--ink)}
 .mixt{font-size:13px;color:var(--muted);white-space:nowrap}.mixt b{color:var(--ink);font-size:15px;font-weight:700}
 .mixb{flex:1;display:flex;height:8px;border-radius:99px;overflow:hidden;background:var(--line)}.mixb i{display:block;min-width:0}
 @media (max-width:700px){.user i{display:none}.user{padding:6px 10px}.brand{min-width:0}.brand .lg{height:32px}.brand .bt b{font-size:14px}.brand .bt small{white-space:nowrap}.utools{gap:4px}}
+
+/* ===== Karyawan: tabel rapat (PC) dan tampilan HP otomatis ===== */
+.kdesk{display:contents}.kl,.kmtop{display:none}
+.ktab th,.ktab td{padding-left:8px!important;padding-right:8px!important}
+.ktab select{padding:6px 18px 6px 8px!important;max-width:96px!important;background-position:right 5px center!important}
+.ktab select[data-f="pay"]{max-width:102px!important}
+.ktab input[type=text]{width:124px!important;max-width:124px!important}
+.ktab input[type=number]{width:84px!important;max-width:84px!important}
+.ktab .knm{white-space:nowrap}.ktab .knm small{display:block;font-size:11px;line-height:1.3;max-width:150px;overflow:hidden;text-overflow:ellipsis}
+.ktab td.kdash select{display:none}.ktab td.kdash::after{content:"\2014";color:var(--muted);padding-left:6px}
+@media (max-width:900px){
+  .kdesk,#kfilters,.kscroll{display:none}
+  .kmtop{display:block;padding:12px 12px 6px}.kl{display:block;padding:0 4px}
+  .kst{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+  .kst>div{border:1px solid var(--line);border-radius:12px;padding:10px 14px;background:var(--surface)}
+  .kst b{display:block;font-size:24px;font-weight:500;font-family:var(--num)}.kst span{font-size:12px;color:var(--muted)}.kst .g b{color:var(--good)}
+  .kbt{display:grid;grid-template-columns:1.1fr 1fr 1fr 1.2fr;gap:8px}.kbt .btn{height:40px;font-size:13px;padding:0 6px;white-space:nowrap}
+  .krow{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr) auto auto 14px;gap:10px;align-items:center;padding:11px 10px;border-bottom:1px solid var(--line)}
+  .krow.off .kn,.krow.off .kd{opacity:.55}
+  .kn{display:flex;flex-direction:column;min-width:0;background:none;border:0;padding:0;text-align:left;cursor:pointer;color:var(--ink)}
+  .kn b{font-size:14px}.kn small{font-size:11px;color:var(--muted);font-family:var(--num)}
+  .kd{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .krow .ks{display:flex;flex-direction:column;align-items:center;gap:3px}.krow .ks span{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .kch{background:none;border:0;color:var(--muted);font-size:20px;padding:0;cursor:pointer}
+  .over-ov.sheet{padding:0;align-items:stretch}
+  .over-ov.sheet .modal{margin-top:auto;border-radius:18px 18px 0 0;width:100%;padding:16px 16px 24px}
+  .over-ov.sheet .form{grid-template-columns:1fr 1fr}
+  .over-ov.sheet .tb .sub{display:block}
+  .kmore{display:flex;flex-direction:column;gap:10px}.kmore .btn{height:44px}
+}

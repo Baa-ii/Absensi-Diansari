@@ -22,8 +22,8 @@
 <script>if(typeof boot==='undefined'||typeof S==='undefined'){document.body.innerHTML='<p style="padding:24px;font:16px system-ui,sans-serif">File aplikasi belum lengkap. Unggah folder assets (style.css, data.js, layout.js) bersama semua halaman ke GitHub.</p>'}</script>
 <script>
 const NEED={data:'1.1',layout:'1.1'};
-V.karyawan=()=>tb('Daftar karyawan',`<button class="btn" data-act="deptmodal">Departemen</button><button class="btn" data-act="vendmodal">Penyedia OS</button><button class="btn" data-act="goto" data-href="impor-karyawan.html">Impor karyawan</button><button class="btn bad" data-act="delallmodal">Hapus semua</button><button class="btn primary" data-act="newemp">Tambah</button>`,'Atur jadwal, kelompok gaji, tarif lembur dan siapa yang berhak lembur. Centang beberapa orang untuk mengubah sekaligus.')+
-  `<section class="panel"><div class="tools" style="padding:12px 14px;border-bottom:1px solid var(--line)"><select data-bind="dept" id="deptsel">${deptOpts(ui.dept)}</select><select data-bind="pay" id="paysel">${payOpts(ui.pay)}</select><select data-bind="vend" id="vendsel">${vendOpts(ui.vend)}</select><input type="text" id="q" data-bind="q" placeholder="Cari nama, ID, jabatan" value="${esc(ui.q)}"><select data-bind="kstat" id="kstatsel" aria-label="Status karyawan">${[['aktif','Hanya aktif'],['off','Hanya nonaktif'],['semua','Semua status']].map(([v,t])=>`<option value="${v}" ${(ui.kstat||(ui.showOff?'semua':'aktif'))===v?'selected':''}>${t}</option>`).join('')}</select></div><div id="list">${LST.karyawan()}</div></section>`;
+V.karyawan=()=>tb('Daftar karyawan',`<span class="kdesk"><button class="btn" data-act="deptmodal">Departemen</button><button class="btn" data-act="vendmodal">Penyedia OS</button><button class="btn" data-act="goto" data-href="impor-karyawan.html">Impor karyawan</button><button class="btn bad" data-act="delallmodal">Hapus semua</button><button class="btn primary" data-act="newemp">Tambah</button></span>`,'Atur jadwal, kelompok gaji, tarif lembur dan siapa yang berhak lembur. Centang beberapa orang untuk mengubah sekaligus.')+
+  `<section class="panel"><div class="tools" id="kfilters" style="padding:12px 14px;border-bottom:1px solid var(--line)"><select data-bind="dept" id="deptsel">${deptOpts(ui.dept)}</select><select data-bind="pay" id="paysel">${payOpts(ui.pay)}</select><select data-bind="vend" id="vendsel">${vendOpts(ui.vend)}</select><input type="text" id="q" data-bind="q" placeholder="Cari nama, ID, jabatan" value="${esc(ui.q)}"><select data-bind="kstat" id="kstatsel" aria-label="Status karyawan">${[['aktif','Hanya aktif'],['off','Hanya nonaktif'],['semua','Semua status']].map(([v,t])=>`<option value="${v}" ${(ui.kstat||(ui.showOff?'semua':'aktif'))===v?'selected':''}>${t}</option>`).join('')}</select></div><div id="list">${LST.karyawan()}</div></section>`;
 const kRows=()=>{const ks=ui.kstat||(ui.showOff?'semua':'aktif');return S.emps.filter(e=>matchQ(e)&&(ks==='semua'||(ks==='off'?e.off:!e.off)))};
 LST.karyawan=()=>{
   const rows=kRows(),sl=rows.slice(ui.page*PS,(ui.page+1)*PS),n=ui.sel.size;
@@ -31,16 +31,44 @@ LST.karyawan=()=>{
   return (n?`<div class="bulk"><b>${n} dipilih</b><button class="btn sm" data-act="bk" data-f="ot" data-v="1">Izinkan lembur</button><button class="btn sm" data-act="bk" data-f="ot" data-v="0">Cabut lembur</button><button class="btn sm" data-act="bk" data-f="sched" data-v="bergilir">Jadwal bergilir</button><button class="btn sm" data-act="bk" data-f="sched" data-v="tetap">Jadwal tetap</button>
    <select data-bind="bkvend" aria-label="Penyedia OS"><option value="">Penyedia OS…</option><option value="_own">Karyawan sendiri</option>${(S.set.vendors||[]).map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join("")}</select><select data-bind="bkpay" aria-label="Kelompok gaji"><option value="">Kelompok gaji…</option>${PAYS.map(p=>`<option>${p}</option>`).join('')}</select><select data-bind="bkshift" aria-label="Shift tetap"><option value="">Shift tetap…</option>${S.set.shifts.map(s=>`<option value="${s.id}">${esc(s.name)}${s.dept?' · '+esc(s.dept):''}</option>`).join('')}</select>
    <input type="number" id="bkrate" min="0" step="500" placeholder="Tarif/jam" style="width:110px"><button class="btn sm" data-act="bkrate">Terapkan tarif</button><input type="text" id="bkdept" list="deptlist" placeholder="Departemen" style="width:140px"><button class="btn sm" data-act="bkdept">Terapkan departemen</button><button class="btn sm bad" data-act="bk" data-f="off" data-v="1">Nonaktifkan</button><button class="btn sm" data-act="bk" data-f="off" data-v="0">Aktifkan</button><button class="btn sm bad" data-act="delselmodal">Hapus terpilih</button><button class="btn sm" data-act="bkclear">Batal pilih</button></div>`:'')+
-  `<datalist id="deptlist">${depts().filter(d=>d!=='Belum diatur').map(d=>`<option value="${esc(d)}">`).join('')}</datalist><div class="scroll"><table><thead><tr><th><label class="sw" title="Pilih semua yang tampil"><input type="checkbox" data-act="selall" ${allOn?'checked':''} aria-label="Pilih semua"><i></i></label></th><th>ID</th><th>NIP</th><th>Nama</th><th>Departemen</th><th>Penyedia</th><th>Jadwal</th><th>Shift tetap</th><th>Kelompok gaji</th><th>Tarif/jam</th><th>Lembur</th><th>Aktif</th></tr></thead><tbody>
-  ${sl.map(e=>`<tr class="${e.off?'off':''}"><td>${sw('sel',e.id,ui.sel.has(e.id),'','Pilih')}</td><td class="mono">${esc(e.id)}</td><td class="mono muted">${esc(e.nip||'')}</td><td style="white-space:nowrap"><button class="lnk" data-act="open" data-id="${esc(e.id)}">${esc(e.name)}</button>${e.pos?`<br><span class="muted">${esc(e.pos)}</span>`:''}</td><td><input type="text" list="deptlist" style="width:140px" data-bind="emp" data-f="dept" data-id="${esc(e.id)}" value="${esc(e.dept)}" aria-label="Departemen"></td>
+  `<div class="kmtop"><div class="kst"><div><b>${actE().length}</b><span>Karyawan aktif</span></div><div class="g"><b>${S.emps.filter(e=>e.ot&&!e.off).length}</b><span>Berhak lembur</span></div></div>
+   <div class="kbt"><button class="btn primary" data-act="newemp">+ Tambah</button><button class="btn" data-act="kfilter">Filter${kFN()?' ('+kFN()+')':''}</button><button class="btn" data-act="goto" data-href="impor-karyawan.html">Impor</button><button class="btn" data-act="kmore">Lainnya \u25be</button></div></div>
+  <datalist id="deptlist">${depts().filter(d=>d!=='Belum diatur').map(d=>`<option value="${esc(d)}">`).join('')}</datalist><div class="scroll kscroll"><table class="ktab"><thead><tr><th><label class="sw" title="Pilih semua yang tampil"><input type="checkbox" data-act="selall" ${allOn?'checked':''} aria-label="Pilih semua"><i></i></label></th><th>Nama / ID / NIP</th><th>Departemen</th><th>Penyedia</th><th>Jadwal</th><th>Shift tetap</th><th>Kelompok gaji</th><th>Tarif/jam</th><th>Lembur</th><th>Aktif</th></tr></thead><tbody>
+  ${sl.map(e=>`<tr class="${e.off?'off':''}"><td>${sw('sel',e.id,ui.sel.has(e.id),'','Pilih')}</td><td class="knm"><button class="lnk" data-act="open" data-id="${esc(e.id)}">${esc(e.name)}</button><small class="mono muted" title="${esc(e.pos||'')}">ID ${esc(e.id)} \u00b7 NIP ${esc(e.nip||'-')}</small></td><td><input type="text" list="deptlist" style="width:140px" data-bind="emp" data-f="dept" data-id="${esc(e.id)}" value="${esc(e.dept)}" aria-label="Departemen"></td>
    <td><select data-bind="emp" data-f="os" data-id="${esc(e.id)}" aria-label="Penyedia" style="max-width:130px"><option value="">Sendiri</option>${(S.set.vendors||[]).concat(e.os&&!(S.set.vendors||[]).includes(e.os)?[e.os]:[]).map(v=>`<option value="${esc(v)}" ${v===e.os?'selected':''}>${esc(v)}</option>`).join("")}</select></td>
    <td><select data-bind="emp" data-f="sched" data-id="${esc(e.id)}" aria-label="Jadwal"><option value="tetap" ${e.sched==='tetap'?'selected':''}>Tetap</option><option value="bergilir" ${e.sched==='bergilir'?'selected':''}>Bergilir</option></select></td>
-   <td><select data-bind="emp" data-f="shift" data-id="${esc(e.id)}" aria-label="Shift" ${e.sched==='bergilir'?'disabled':''}>${S.set.shifts.map(s=>`<option value="${s.id}" ${s.id===e.shift?'selected':''}>${esc(s.name)}${s.dept?' · '+esc(s.dept):''}</option>`).join('')}</select></td>
+   <td class="${e.sched==='bergilir'?'kdash':''}"><select data-bind="emp" data-f="shift" data-id="${esc(e.id)}" aria-label="Shift" ${e.sched==='bergilir'?'disabled':''}>${S.set.shifts.map(s=>`<option value="${s.id}" ${s.id===e.shift?'selected':''}>${esc(s.name)}${s.dept?' · '+esc(s.dept):''}</option>`).join('')}</select></td>
    <td><select data-bind="emp" data-f="pay" data-id="${esc(e.id)}" aria-label="Kelompok gaji">${PAYS.map(p=>`<option ${p===e.pay?'selected':''}>${p}</option>`).join('')}</select></td>
    <td><input type="number" min="0" step="500" style="width:90px" data-bind="emp" data-f="rate" data-id="${esc(e.id)}" value="${e.rate||''}" placeholder="${S.set.rate}" aria-label="Tarif lembur per jam"></td>
-   <td>${sw('emp',e.id,e.ot,'data-f="ot"','Boleh lembur')}</td><td>${sw('emp',e.id,!e.off,'data-f="on"','Aktif')}</td></tr>`).join('')||'<tr><td colspan="12" class="empty">Tidak ada karyawan.</td></tr>'}</tbody></table></div>${pager(rows.length)}
+   <td>${sw('emp',e.id,e.ot,'data-f="ot"','Boleh lembur')}</td><td>${sw('emp',e.id,!e.off,'data-f="on"','Aktif')}</td></tr>`).join('')||'<tr><td colspan="10" class="empty">Tidak ada karyawan.</td></tr>'}</tbody></table></div>
+  <div class="kl">${sl.map(e=>`<div class="krow ${e.off?'off':''}"><button class="kn" data-act="kdet" data-id="${esc(e.id)}"><b>${esc(e.name)}</b><small>ID ${esc(e.id)} \u00b7 NIP ${esc(e.nip||'-')}</small></button><span class="kd">${esc(e.dept)}</span><div class="ks"><span>Lembur</span>${sw('emp',e.id,e.ot,'data-f="ot"','Boleh lembur')}</div><div class="ks"><span>Aktif</span>${sw('emp',e.id,!e.off,'data-f="on"','Aktif')}</div><button class="kch" data-act="kdet" data-id="${esc(e.id)}" aria-label="Rincian">\u203a</button></div>`).join('')||'<p class="empty" style="padding:18px">Tidak ada karyawan.</p>'}</div>${pager(rows.length)}
   <div class="pager"><span>${S.emps.length} karyawan · ${actE().length} aktif · ${S.emps.filter(e=>e.ot&&!e.off).length} berhak lembur · tarif kosong memakai tarif umum ${rp(S.set.rate)}</span></div>`;
 };
+const kFN=()=>(ui.dept?1:0)+(ui.pay?1:0)+(ui.vend?1:0)+(ui.q?1:0)+((ui.kstat||(ui.showOff?'semua':'aktif'))!=='aktif'?1:0);
+const sheet=h=>{modal(h);const o=layer().firstElementChild;if(o)o.classList.add('sheet')};
+function kFilterSheet(){
+  const ks=ui.kstat||(ui.showOff?'semua':'aktif');
+  sheet(`<div class="tb" style="padding:0"><h1>Filter</h1><button class="btn" data-act="closemodal">Selesai</button></div>
+  <div class="form"><label class="f" style="grid-column:1/-1">Cari<input type="text" data-bind="q" placeholder="Nama, ID, jabatan" value="${esc(ui.q)}"></label>
+  <label class="f">Departemen<select data-bind="dept">${deptOpts(ui.dept)}</select></label><label class="f">Kelompok gaji<select data-bind="pay">${payOpts(ui.pay)}</select></label>
+  <label class="f">Penyedia<select data-bind="vend">${vendOpts(ui.vend)}</select></label><label class="f">Status<select data-bind="kstat">${[['aktif','Hanya aktif'],['off','Hanya nonaktif'],['semua','Semua status']].map(([v,t])=>`<option value="${v}" ${ks===v?'selected':''}>${t}</option>`).join('')}</select></label></div>
+  <div class="tools" style="justify-content:flex-end"><button class="btn" data-act="kreset">Reset filter</button><button class="btn primary" data-act="closemodal">Selesai</button></div>`);
+}
+function kMoreSheet(){
+  sheet(`<div class="tb" style="padding:0"><h1>Lainnya</h1><button class="btn" data-act="closemodal">Tutup</button></div>
+  <div class="kmore"><button class="btn" data-act="deptmodal">Departemen</button><button class="btn" data-act="vendmodal">Penyedia OS</button><button class="btn bad" data-act="delallmodal">Hapus semua karyawan</button></div>`);
+}
+function kDetSheet(id){
+  const e=S.emps.find(x=>x.id===id);if(!e)return;const ei=esc(e.id);
+  sheet(`<div class="tb" style="padding:0"><div><h1>${esc(e.name)}</h1><p class="sub" style="margin:2px 0 0">ID ${ei} \u00b7 NIP ${esc(e.nip||'-')}${e.pos?' \u00b7 '+esc(e.pos):''}</p></div><button class="btn" data-act="kdone">Selesai</button></div>
+  <div class="form"><label class="f" style="grid-column:1/-1">Departemen<input type="text" list="deptlist" data-bind="emp" data-f="dept" data-id="${ei}" value="${esc(e.dept)}"></label>
+  <label class="f">Penyedia<select data-bind="emp" data-f="os" data-id="${ei}"><option value="">Sendiri</option>${(S.set.vendors||[]).concat(e.os&&!(S.set.vendors||[]).includes(e.os)?[e.os]:[]).map(v=>`<option value="${esc(v)}" ${v===e.os?'selected':''}>${esc(v)}</option>`).join('')}</select></label>
+  <label class="f">Jadwal<select data-bind="kdsched" data-id="${ei}"><option value="tetap" ${e.sched==='tetap'?'selected':''}>Tetap</option><option value="bergilir" ${e.sched==='bergilir'?'selected':''}>Bergilir</option></select></label>
+  ${e.sched==='bergilir'?'':`<label class="f">Shift tetap<select data-bind="emp" data-f="shift" data-id="${ei}">${S.set.shifts.map(s=>`<option value="${s.id}" ${s.id===e.shift?'selected':''}>${esc(s.name)}${s.dept?' \u00b7 '+esc(s.dept):''}</option>`).join('')}</select></label>`}
+  <label class="f">Kelompok gaji<select data-bind="emp" data-f="pay" data-id="${ei}">${PAYS.map(p=>`<option ${p===e.pay?'selected':''}>${p}</option>`).join('')}</select></label>
+  <label class="f">Tarif lembur/jam<input type="number" min="0" step="500" data-bind="emp" data-f="rate" data-id="${ei}" value="${e.rate||''}" placeholder="${S.set.rate}"></label></div>
+  <button class="btn" data-act="kopen" data-id="${ei}">Lihat absensi ${esc(e.name)}</button>`);
+}
 function vendModal(){
   const vs=S.set.vendors;
   modal(`<div class="tb" style="padding:0"><h1>Penyedia OS</h1><button class="btn" data-act="closemodal">Tutup</button></div>
@@ -61,6 +89,10 @@ function newEmpModal(){
 Object.assign(ACT,{
   newemp(){newEmpModal()},
   vendmodal(){vendModal()},
+  kfilter(){kFilterSheet()},kmore(){kMoreSheet()},kdet(a){kDetSheet(a.dataset.id)},
+  kdone(){layer().innerHTML='';refresh()},
+  kopen(a){layer().innerHTML='';refresh();ACT.open(a)},
+  kreset(){ui.dept=ui.pay=ui.vend=ui.q='';ui.kstat='aktif';ui.showOff=false;ui.page=0;refresh();kFilterSheet()},
   addvend(){const t=$('#vn-new'),v=t.value.trim();if(!v){toast('Isi nama penyedia');return}
     if(S.set.vendors.some(x=>x.toLowerCase()===v.toLowerCase())){toast('Nama penyedia sudah ada');return}
     S.set.vendors.push(v);save();vendModal();render()},
@@ -92,6 +124,7 @@ Object.assign(ACT,{
 });
 Object.assign(BIND,{
   showoff(t){ui.showOff=t.checked;ui.page=0;refresh()},
+  kdsched(t){const x=S.emps.find(y=>y.id===t.dataset.id);if(!x)return;x.sched=t.value;save();kDetSheet(x.id)},
   kstat(t){ui.kstat=t.value;ui.showOff=t.value!=='aktif';ui.page=0;refresh()},
   sel(t){t.checked?ui.sel.add(t.dataset.id):ui.sel.delete(t.dataset.id);refresh()},
   emp(t){const x=S.emps.find(y=>y.id===t.dataset.id),f=t.dataset.f;if(!x)return;
