@@ -31,6 +31,7 @@ function migrate(s){
   if(s.set.rate==null)s.set.rate=24000;
   s.set.holidays=s.set.holidays||[];
   s.set.vendors=Array.isArray(s.set.vendors)?s.set.vendors:[];
+  s.set.depts=Array.isArray(s.set.depts)?s.set.depts:[];
   s.emps=s.emps||[];
   s.emps.forEach(e=>{e.pos=e.pos||'';e.sched=e.sched||'tetap';e.pay=e.pay||'Bulanan';e.rate=+e.rate||0;e.off=!!e.off;e.ot=!!e.ot;e.os=e.os||''});
   s.att=s.att||{};s.spl=s.spl||[];s.imports=s.imports||[];

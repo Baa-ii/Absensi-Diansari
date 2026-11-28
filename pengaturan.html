@@ -22,12 +22,12 @@
 <script>if(typeof boot==='undefined'||typeof S==='undefined'){document.body.innerHTML='<p style="padding:24px;font:16px system-ui,sans-serif">File aplikasi belum lengkap. Unggah folder assets (style.css, data.js, layout.js) bersama semua halaman ke GitHub.</p>'}</script>
 <script>
 const NEED={data:'1.1',layout:'1.1'};
-const sdeptList=()=>[...new Set([...S.emps.map(e=>e.dept),...S.set.shifts.map(s=>s.dept||'')])].filter(d=>d&&d!=='Belum diatur').sort();
+const sdeptList=()=>depts().filter(d=>d!=='Belum diatur');
 V.pengaturan=()=>{
   const t=ui.setTab,head={jam:'Jam kerja',aturan:'Aturan & tarif',libur:'Hari libur',data:'Data & cadangan'}[t];
   let body='';
   if(t==='jam')body=`<section class="panel pad" style="display:flex;flex-direction:column;gap:16px">
-    <div class="tools"><label class="f" style="min-width:260px">Berlaku untuk departemen<select data-bind="sdept"><option value="">Umum (semua departemen)</option>${sdeptList().map(d=>`<option ${d===ui.sdept?'selected':''}>${esc(d)}</option>`).join('')}</select></label>${ui.sdept?`<label class="f">Salin shift dari<select id="cpfrom"><option value="">Umum</option>${sdeptList().filter(d=>d!==ui.sdept).map(d=>`<option>${esc(d)}</option>`).join('')}</select></label><button class="btn sm" data-act="copyshift">Salin ke ${esc(ui.sdept)}</button>`:''}</div>
+    <div class="tools"><label class="f" style="min-width:260px">Berlaku untuk departemen<select data-bind="sdept"><option value="">Umum (semua departemen)</option>${sdeptList().map(d=>`<option ${d===ui.sdept?'selected':''}>${esc(d)}</option>`).join('')}</select></label><button class="btn" data-act="deptmodal" style="align-self:flex-end">Tambah / hapus departemen</button>${ui.sdept?`<label class="f">Salin shift dari<select id="cpfrom"><option value="">Umum</option>${sdeptList().filter(d=>d!==ui.sdept).map(d=>`<option>${esc(d)}</option>`).join('')}</select></label><button class="btn sm" data-act="copyshift">Salin ke ${esc(ui.sdept)}</button>`:''}</div>
     <p class="sub" style="margin:0">${ui.sdept?`Shift di bawah ini hanya dipakai karyawan departemen <b>${esc(ui.sdept)}</b> (sesuai kolom Departemen di menu Karyawan). Kalau departemen ini belum punya shift sendiri, karyawannya memakai shift Umum.`:'Shift Umum dipakai semua departemen yang belum punya shift sendiri.'} Mengubah jam shift ikut mengubah rekap periode lama.</p>
     ${S.set.shifts.map((s,i)=>(s.dept||'')!==(ui.sdept||'')?'':`<div style="border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:12px">
       <div class="form"><label class="f">Nama shift<input type="text" data-bind="shiftf" data-i="${i}" data-k="name" value="${esc(s.name)}"></label><label class="f">Masuk<input type="time" data-bind="shiftf" data-i="${i}" data-k="start" value="${s.start}"></label><label class="f">Pulang<input type="time" data-bind="shiftf" data-i="${i}" data-k="end" value="${s.end}"></label>

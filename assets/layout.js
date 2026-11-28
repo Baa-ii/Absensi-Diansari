@@ -10,7 +10,7 @@ const secOf=v=>SEC.find(s=>s.items.some(i=>i.v===v));
 const V={},LST={},ACT={},BIND={},PAGE={view:'',getSub:null,after:null,need:null};
 
 /* ---------- pembangun tampilan bersama ---------- */
-const depts=()=>[...new Set(S.emps.map(e=>e.dept))].sort();
+const depts=()=>[...new Set([...S.emps.map(e=>e.dept),...(S.set.depts||[]),...S.set.shifts.map(s=>s.dept||'')])].filter(Boolean).sort();
 const PAYS=['Mingguan','2 mingguan','Bulanan'];
 const deptOpts=sel=>'<option value="">Semua departemen</option>'+depts().map(d=>`<option ${d===sel?'selected':''}>${esc(d)}</option>`).join('');
 const vendOpts=sel=>'<option value="">Semua penyedia</option><option value="_own" '+(sel==='_own'?'selected':'')+'>Karyawan sendiri</option>'+(S.set.vendors||[]).map(v=>`<option value="${esc(v)}" ${v===sel?'selected':''}>${esc(v)}</option>`).join('');
@@ -25,6 +25,14 @@ const rangeCtl=()=>`<input type="date" id="from" data-bind="from" value="${ui.fr
 const schedText=e=>e.sched==='bergilir'?'Shift bergilir':'Tetap '+shiftOf(e).name;
 function colName(im,i){const h=im.head;return h&&h[i]?h[i]:'Kolom '+(i+1)}
 function colOpts(im,sel,none){return (none?`<option value="-1" ${sel<0?'selected':''}>${none}</option>`:'')+Array.from({length:im.ncol},(_,i)=>`<option value="${i}" ${i===sel?'selected':''}>${esc(colName(im,i))}</option>`).join('')}
+/* ===== kelola departemen: tambah & hapus (dipakai di Karyawan dan Pengaturan) ===== */
+function deptModal(){
+  const ds=depts().filter(d=>d!=='Belum diatur');
+  modal(`<div class="tb" style="padding:0"><h1>Departemen</h1><button class="btn" data-act="closemodal">Tutup</button></div>
+  <p class="sub">Daftar departemen untuk kolom Departemen di menu Karyawan dan untuk shift per departemen. Menghapus departemen tidak menghapus karyawan: mereka menjadi "Belum diatur" dan memakai shift Umum. Shift milik departemen itu ikut terhapus. Data absensi tidak disentuh, hanya hitungannya yang menyesuaikan.</p>
+  ${ds.map(d=>{const n=S.emps.filter(e=>e.dept===d).length,m=S.set.shifts.filter(s=>s.dept===d).length;return `<div class="tools" style="margin-bottom:6px"><span style="flex:1;font-weight:600">${esc(d)}</span><span class="muted" style="min-width:150px;text-align:right">${n} karyawan · ${m} shift</span><button class="btn sm bad" data-act="deldept" data-d="${esc(d)}">${ui.ddel===d?'Yakin hapus?':'Hapus'}</button></div>`}).join('')||'<p class="muted">Belum ada departemen.</p>'}
+  <div class="tools" style="margin-top:8px"><input type="text" id="dp-new" placeholder="Nama departemen baru, mis. Packing" style="flex:1" maxlength="40"><button class="btn primary" data-act="adddept">Tambah</button></div>`);
+}
 function toast(t){const el=$('#toast');el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,2400)}
 const layer=()=>$('#layer');
 function closeAll(){ui.drawer=null;layer().innerHTML=''}
@@ -121,6 +129,20 @@ Object.assign(ACT,{
   theme(){const r=document.documentElement,cur=r.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'),nx=cur==='dark'?'light':'dark';r.dataset.theme=nx;try{localStorage.setItem('absensi-theme',nx)}catch(e){}},
   prev(){ui.page--;refresh()},next(){ui.page++;refresh()},
   open(a){ui.drawer=a.dataset.id;render()},gopen(a){ui.drawer=a.dataset.id;$('#gsr').hidden=true;$('#gs').value='';render()},
+  deptmodal(){ui.ddel=null;deptModal()},
+  adddept(){const t=$('#dp-new');let v=(t.value||'').replace(/\s+/g,' ').trim();if(!v){toast('Isi nama departemen');return}
+    if(v.toLowerCase()==='belum diatur'){toast('Nama itu dipakai sistem');return}
+    const ada=depts().find(x=>x.toLowerCase()===v.toLowerCase());
+    if(ada){toast('Departemen sudah ada: '+ada);if($('[data-bind="sdept"]'))ui.sdept=ada;deptModal();render();return}
+    S.set.depts.push(v);if($('[data-bind="sdept"]'))ui.sdept=v;save();ui.ddel=null;deptModal();render();toast('Departemen ditambahkan')},
+  deldept(a){const d=a.dataset.d;if(!d)return;
+    if(ui.ddel!==d){ui.ddel=d;deptModal();return}ui.ddel=null;
+    const dead=new Set(S.set.shifts.filter(s=>s.dept===d).map(s=>s.id));
+    const fb=(S.set.shifts.find(s=>!s.dept&&!s.rot)||S.set.shifts.find(s=>!s.dept&&!dead.has(s.id))||{}).id||'';
+    let n=0;S.emps.forEach(e=>{if(e.dept===d){e.dept='Belum diatur';n++}if(dead.has(e.shift))e.shift=fb});
+    S.set.shifts=S.set.shifts.filter(s=>s.dept!==d);S.set.depts=S.set.depts.filter(x=>x!==d);
+    if(ui.dept===d)ui.dept='';if(ui.sdept===d)ui.sdept='';save();deptModal();render();
+    toast('Departemen dihapus'+(n?'; '+n+' karyawan menjadi Belum diatur':'')+(dead.size?'; '+dead.size+' shift ikut dihapus':''))},
   closedrawer(){closeAll()},closemodal(){ui.editSpl=null;layer().innerHTML=''},
   ovclick(a,e){if(e.target===a){ui.drawer?closeAll():layer().innerHTML=''}},
   viewspl(a){viewSpl(a.dataset.id)},
